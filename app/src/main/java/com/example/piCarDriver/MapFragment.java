@@ -63,7 +63,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private LocationRequest locationRequest;
     private LocationSettingsRequest locationSettingsRequest;
     private Location location;
-    private Place endLoc;
     private GoogleMap map;
 
     @SuppressLint("MissingPermission")
@@ -72,17 +71,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_map, container, false);
-        TextView whereGo = view.findViewById(R.id.whereGo);
-        whereGo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                getActivity().getSupportFragmentManager()
-                             .beginTransaction()
-                             .replace(R.id.frameLayout, new LocationInputFragment(), "locationInput")
-                             .addToBackStack("locationInput")
-                             .commit();
-            }
-        });
         SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
         if (mapFragment == null) {
             mapFragment = SupportMapFragment.newInstance();
@@ -91,71 +79,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                      .commit();
         }
 
-        NestedScrollView bottomSheet = view.findViewById(R.id.bottomSheet);
-
-        if (endLoc != null) {
-            Log.i(TAG, "success get endLoc");
-            bottomSheet.setVisibility(View.VISIBLE);
-            ImageView callNormal = view.findViewById(R.id.callNormal);
-            ImageView drunk = view.findViewById(R.id.drunk);
-            final Button callCar = view.findViewById(R.id.callCar);
-            final SingleOrder singleOrder = new SingleOrder();
-            callNormal.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    singleOrder.setOrderType(Util.NORMAL);
-                    callCar.setText("一般叫車");
-                    callCar.setVisibility(View.VISIBLE);
-                }
-            });
-            drunk.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    singleOrder.setOrderType(Util.DRUNK);
-                    callCar.setText("代駕");
-                    callCar.setVisibility(View.VISIBLE);
-                }
-            });
-
-            callCar.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Geocoder geocoder = new Geocoder(getActivity());
-                    try {
-                        List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                        Address address = addresses.get(0);
-                        singleOrder.setMemID("M001");
-                        singleOrder.setStartLoc(address.getAddressLine(0));
-                        singleOrder.setStartLat(address.getLatitude());
-                        singleOrder.setStartLng(address.getLongitude());
-                        singleOrder.setEndLoc((String) endLoc.getAddress());
-                        singleOrder.setEndLat(endLoc.getLatLng().latitude);
-                        singleOrder.setEndLng(endLoc.getLatLng().longitude);
-                        singleOrder.setState(0);
-                        JsonObject jsonObject = new JsonObject();
-                        jsonObject.addProperty("action", "insert");
-                        jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
-                        try {
-                            new SingleOrderTask().execute("/singleOrderApi", jsonObject.toString()).get();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        Log.i(TAG, singleOrder.toString());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        } else
-            bottomSheet.setVisibility(View.GONE);
-
         mapFragment.getMapAsync(this);
         locationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
         settingsClient = LocationServices.getSettingsClient(getActivity());
-//        createLocationCallback();
-//        buildSettingLocationRequest();
+        createLocationCallback();
+        createLocationRequest();
+        buildSettingLocationRequest();
+        startLocationUpdate();
         return view;
     }
 
@@ -184,6 +114,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 location = locationResult.getLastLocation();
+                Toast.makeText(getContext(), location.getLatitude() + " " + location.getLongitude(), Toast.LENGTH_LONG).show();
             }
         };
     }
@@ -244,32 +175,5 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         Log.e(TAG, "Cancel location updates requested");
                     }
                 });
-    }
-
-    public void onPlaceInputCallBack(Place place) {
-        this.endLoc = place;
-    }
-
-    private static class SingleOrderTask extends AsyncTask<String, Void, Boolean> {
-
-        @Override
-        protected Boolean doInBackground(String... strings) {
-            try {
-                HttpURLConnection connection = (HttpURLConnection) new URL(Util.URL + strings[0]).openConnection();
-                connection.setDoInput(true);
-                connection.setDoInput(true);
-                connection.setUseCaches(false);
-                connection.setRequestMethod("POST");
-                connection.setRequestProperty("content-type", "charset=utf-8;");
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-                bufferedWriter.write(strings[1]);
-                bufferedWriter.close();
-                connection.getInputStream().close();
-                connection.disconnect();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
     }
 }
