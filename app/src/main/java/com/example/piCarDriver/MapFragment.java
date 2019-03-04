@@ -2,23 +2,16 @@ package com.example.piCarDriver;
 
 import android.annotation.SuppressLint;
 import android.content.IntentSender;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.widget.NestedScrollView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
@@ -42,17 +35,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.libraries.places.compat.Place;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
     private final static String TAG = "MapFragment";
@@ -87,6 +69,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         buildSettingLocationRequest();
         startLocationUpdate();
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        startLocationUpdate();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        stopLocationUpdates();
     }
 
     @SuppressLint("MissingPermission")

@@ -6,7 +6,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -25,18 +24,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.example.piCarDriver.task.LoginTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.lang.ref.WeakReference;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -108,17 +100,21 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-
-        if (id == R.id.nav_credit_card) {
-
+        FragmentManager manager = getSupportFragmentManager();
+        if (id == R.id.nav_order) {
+            Fragment order = manager.findFragmentByTag("Order");
+            if (order == null || order.isDetached())
+                manager.beginTransaction()
+                       .addToBackStack("Order")
+                       .replace(R.id.frameLayout, new OrderFragment(), "Order")
+                       .commit();
         } else if (id == R.id.nav_favor_setting) {
-            FragmentManager manager = getSupportFragmentManager();
             Fragment preferenceFrag = manager.findFragmentByTag("Preference");
             if (preferenceFrag == null || preferenceFrag.isDetached())
-                getSupportFragmentManager().beginTransaction()
-                                           .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
-                                           .addToBackStack("PreferenceFragment")
-                                           .commit();
+                manager.beginTransaction()
+                       .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
+                       .addToBackStack("PreferenceFragment")
+                       .commit();
         } else if (id == R.id.nav_logout) {
             SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
             preferences.edit()
@@ -135,45 +131,6 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
-    private static class LoginTask extends AsyncTask<String, Void, String> {
-        private WeakReference<MainActivity> context;
-        private ProgressDialogFragment fragment;
-        LoginTask(MainActivity context) {
-            this.context = new WeakReference<>(context);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            MainActivity mainActivity = context.get();
-            if (mainActivity != null) {
-                fragment = new ProgressDialogFragment();
-                fragment.show(mainActivity.getSupportFragmentManager(), "TTT");
-            }
-        }
-
-        @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            String account = strings[1];
-            String password = strings[2];
-            String jsonIn = null;
-            try {
-                jsonIn = getRemoteData(url, account, password);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            return jsonIn;
-        }
-
-        @Override
-        protected void onPostExecute(String jsonIn) {
-            fragment.dismiss();
-            super.onPostExecute(jsonIn);
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -185,32 +142,6 @@ public class MainActivity extends AppCompatActivity
                     startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
             }
         }
-    }
-
-    private static String getRemoteData(String url, String account, String password) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setDoInput(true);
-        connection.setDoOutput(true);
-        connection.setUseCaches(false);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("content-type", "charset=utf-8;");
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("action", "login");
-        jsonObject.addProperty("account", account);
-        jsonObject.addProperty("password", password);
-        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bufferedWriter.write(jsonObject.toString());
-        bufferedWriter.close();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        StringBuilder jsonIn = new StringBuilder();
-        String line;
-        while ((line = bufferedReader.readLine()) != null) {
-            jsonIn.append(line);
-        }
-
-        bufferedReader.close();
-        connection.disconnect();
-        return jsonIn.toString();
     }
 
     private boolean isValidLogin(String url, String account, String password) {
