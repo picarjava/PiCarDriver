@@ -1,8 +1,11 @@
 package com.example.piCarDriver;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.sql.Timestamp;
 
-public class SingleOrder {
+public class SingleOrder implements Parcelable {
     private String orderID;
     private String driverID;
     private String memId;
@@ -168,5 +171,61 @@ public class SingleOrder {
                 + ", lauchTime=" + launchTime + "]";
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
 
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.orderID);
+        dest.writeString(this.driverID);
+        dest.writeString(this.memId);
+        dest.writeInt(this.state);
+        dest.writeInt(this.totalAmount);
+        dest.writeString(this.startLoc);
+        dest.writeString(this.endLoc);
+        dest.writeLong(this.startTime.getTime());
+        dest.writeLong(this.endTime.getTime());
+        dest.writeDouble(this.startLng);
+        dest.writeDouble(this.startLat);
+        dest.writeDouble(this.endLng);
+        dest.writeDouble(this.endLat);
+        dest.writeInt(this.orderType);
+        dest.writeInt(this.rate);
+        dest.writeString(this.note);
+        dest.writeLong(this.launchTime.getTime());
+    }
+
+    protected SingleOrder(Parcel in) {
+        this.orderID = in.readString();
+        this.driverID = in.readString();
+        this.memId = in.readString();
+        this.state = in.readInt();
+        this.totalAmount = in.readInt();
+        this.startLoc = in.readString();
+        this.endLoc = in.readString();
+        this.startTime = new Timestamp(in.readLong());
+        this.endTime = new Timestamp(in.readLong());
+        this.startLng = in.readDouble();
+        this.startLat = in.readDouble();
+        this.endLng = in.readDouble();
+        this.endLat = in.readDouble();
+        this.orderType = in.readInt();
+        this.rate = in.readInt();
+        this.note = in.readString();
+        this.launchTime = new Timestamp(in.readLong());
+    }
+
+    public static final Parcelable.Creator<SingleOrder> CREATOR = new Parcelable.Creator<SingleOrder>() {
+        @Override
+        public SingleOrder createFromParcel(Parcel source) {
+            return new SingleOrder(source);
+        }
+
+        @Override
+        public SingleOrder[] newArray(int size) {
+            return new SingleOrder[size];
+        }
+    };
 }

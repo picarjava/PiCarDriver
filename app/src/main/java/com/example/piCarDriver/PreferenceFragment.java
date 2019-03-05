@@ -14,6 +14,14 @@ import android.widget.Switch;
 
 public class PreferenceFragment extends Fragment {
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState != null)
+            if (!savedInstanceState.getBoolean("Show"))
+                getFragmentManager().beginTransaction().hide(this).commit();
+    }
+
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_preference, container, false);
@@ -53,5 +61,11 @@ public class PreferenceFragment extends Fragment {
         });
 
         return view;
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("Show", !isHidden());
     }
 }

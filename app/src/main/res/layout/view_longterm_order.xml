@@ -29,8 +29,16 @@
         android:gravity="center"
         android:text="上車時間" />
 
+    <TextView
+        android:id="@+id/endTime"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="結束時間" />
+
     <Button
-        android:id="@+id/button"
+        android:id="@+id/acceptOrder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="1"

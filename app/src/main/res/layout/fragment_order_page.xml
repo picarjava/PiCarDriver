@@ -21,7 +21,7 @@
         app:layout_constraintVertical_bias="1.0"
         tools:itemCount="20"
         tools:layoutManager="android.support.v7.widget.GridLayoutManager"
-        tools:listitem="@layout/view_order"
+        tools:listitem="@layout/view_single_order"
         tools:orientation="vertical"
         tools:scrollbars="vertical" />
 </android.support.constraint.ConstraintLayout>

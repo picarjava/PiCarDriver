@@ -1,8 +1,9 @@
 package com.example.piCarDriver.task;
 
 import android.os.AsyncTask;
+import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 
-import com.example.piCarDriver.MainActivity;
 import com.example.piCarDriver.ProgressDialogFragment;
 import com.google.gson.JsonObject;
 
@@ -16,16 +17,17 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class OrderTask extends AsyncTask<String, Void, String> {
-    private WeakReference<MainActivity> context;
+    private final static String TAG = "OrderTask";
+    private WeakReference<FragmentActivity> context;
     private ProgressDialogFragment fragment;
-    public OrderTask(MainActivity context) {
+    public OrderTask(FragmentActivity context) {
         this.context = new WeakReference<>(context);
     }
 
     @Override
     protected void onPreExecute() {
         super.onPreExecute();
-        MainActivity mainActivity = context.get();
+        FragmentActivity mainActivity = context.get();
         if (mainActivity != null) {
             fragment = new ProgressDialogFragment();
             fragment.show(mainActivity.getSupportFragmentManager(), "TTT");
@@ -51,7 +53,7 @@ public class OrderTask extends AsyncTask<String, Void, String> {
         super.onPostExecute(jsonIn);
     }
 
-    private String getRemoteData(String url, String jsonOrder) throws IOException {
+    private String getRemoteData(String url, String action) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setDoInput(true);
         connection.setDoOutput(true);
@@ -59,8 +61,7 @@ public class OrderTask extends AsyncTask<String, Void, String> {
         connection.setRequestMethod("POST");
         connection.setRequestProperty("content-type", "charset=utf-8;");
         JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("action", "login");
-        jsonObject.addProperty("order", jsonOrder);
+        jsonObject.addProperty("action", action);
         BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
         bufferedWriter.write(jsonObject.toString());
         bufferedWriter.close();
@@ -69,6 +70,7 @@ public class OrderTask extends AsyncTask<String, Void, String> {
         String line;
         while ((line = bufferedReader.readLine()) != null) {
             jsonIn.append(line);
+            Log.d(TAG, line);
         }
 
         bufferedReader.close();

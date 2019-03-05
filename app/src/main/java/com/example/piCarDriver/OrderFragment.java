@@ -8,14 +8,29 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
+import com.example.piCarDriver.orderPageFragment.SingleOrderPageFragment;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class OrderFragment extends Fragment {
+    private final static String TAG = "OrderFragment";
+    private List<OrderPage> orderPages;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState != null)
+            if (savedInstanceState.getBoolean("Show"))
+                getFragmentManager().beginTransaction().hide(this).commit();
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -23,10 +38,18 @@ public class OrderFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_order, container, false);
         TabLayout tabLayout = view.findViewById(R.id.tabLayout);
         ViewPager viewPager = view.findViewById(R.id.viewPager);
-        List<OrderPage> orderPages = new ArrayList<>();
+        orderPages = new ArrayList<>();
+        orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
+        orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
         viewPager.setAdapter(new ViewPageAdapter(getChildFragmentManager(), orderPages));
         tabLayout.setupWithViewPager(viewPager);
         return view;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
     }
 
     private class ViewPageAdapter extends FragmentPagerAdapter {
@@ -63,5 +86,21 @@ public class OrderFragment extends Fragment {
         public CharSequence getPageTitle(int position) {
             return pages.get(position).getTitle();
         }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(TAG, String.valueOf(isHidden()));
+        outState.putBoolean("Show", isHidden());
+    }
+
+    private OrderPage newOrderPage(String url, String action, String title) {
+        SingleOrderPageFragment orderPageFragment = new SingleOrderPageFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString("url", url);
+        bundle.putString("action", action);
+        orderPageFragment.setArguments(bundle);
+        return new OrderPage(orderPageFragment, title);
     }
 }

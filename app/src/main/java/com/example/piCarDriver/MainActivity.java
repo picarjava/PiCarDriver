@@ -14,6 +14,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -101,16 +102,22 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         FragmentManager manager = getSupportFragmentManager();
+        FragmentTransaction transaction = manager.beginTransaction();
+        Fragment preferenceFrag = manager.findFragmentByTag("Preference");
+        Fragment order = manager.findFragmentByTag("Order");
         if (id == R.id.nav_order) {
-            Fragment order = manager.findFragmentByTag("Order");
-            if (order == null || order.isDetached())
-                manager.beginTransaction()
-                       .addToBackStack("Order")
-                       .replace(R.id.frameLayout, new OrderFragment(), "Order")
-                       .commit();
+            if (preferenceFrag != null)
+                manager.popBackStack();
+
+            if (order == null)
+                transaction.replace(R.id.frameLayout, new OrderFragment(), "Order")
+                           .addToBackStack("Order")
+                           .commit();
         } else if (id == R.id.nav_favor_setting) {
-            Fragment preferenceFrag = manager.findFragmentByTag("Preference");
-            if (preferenceFrag == null || preferenceFrag.isDetached())
+            if (order != null)
+                manager.popBackStack();
+
+            if (preferenceFrag == null)
                 manager.beginTransaction()
                        .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
                        .addToBackStack("PreferenceFragment")

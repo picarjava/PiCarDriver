@@ -108,7 +108,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 location = locationResult.getLastLocation();
-                Toast.makeText(getContext(), location.getLatitude() + " " + location.getLongitude(), Toast.LENGTH_LONG).show();
             }
         };
     }
