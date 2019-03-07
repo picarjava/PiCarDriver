@@ -1,12 +1,16 @@
 package com.example.piCarDriver;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -22,25 +26,48 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import com.example.piCarDriver.task.LoginTask;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener,
+                   DriverCallBack, LocationNowCallBack {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
-    private final static int PERMISSION_REQUSET = 0;
+    private final static int PERMISSION_REQUEST = 0;
+    private static final int REQUEST_CHECK_SETTINGS = 1;
     private static Driver driver;
+    private FusedLocationProviderClient locationProviderClient;
+    private SettingsClient settingsClient;
+    private LocationCallback locationCallback;
+    private LocationRequest locationRequest;
+    private LocationSettingsRequest locationSettingsRequest;
+    private Location location;
+    private LocationWebSocket locationWebSocket;
 
+    @SuppressLint("MissingPermission")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,13 +76,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -75,10 +96,43 @@ public class MainActivity extends AppCompatActivity
             if (!isValidLogin(Util.URL + "/driverApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
             else {
-                getSupportFragmentManager().beginTransaction()
-                                           .replace(R.id.frameLayout, new MapFragment(), "Map")
-                                           .commit();
+                URI uri = null;
+                try {
+                    uri = new URI(Util.URL + "/locationWebSocket/" + driver.getDriverID());
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+
+                locationWebSocket = new LocationWebSocket(uri);
+                locationWebSocket.connect();
+                locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+                settingsClient = LocationServices.getSettingsClient(this);
+                createLocationCallback();
+                createLocationRequest();
+                buildSettingLocationRequest();
+                locationProviderClient.getLastLocation()
+                                      .addOnSuccessListener(
+                                              location -> {
+                                                  this.location = location;
+                                                  getSupportFragmentManager().beginTransaction()
+                                                                             .replace(R.id.frameLayout, new MapFragment(), "Map")
+                                                                             .commit();
+
+                                              });
             }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startLocationUpdate();
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates();
     }
 
     @Override
@@ -202,14 +256,14 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (!permissionRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUSET);
+            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUEST);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
-            case PERMISSION_REQUSET:
+            case PERMISSION_REQUEST:
                 for (int result: grantResults)
                     if (result != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "Permission needed", Toast.LENGTH_LONG).show();
@@ -219,4 +273,83 @@ public class MainActivity extends AppCompatActivity
                     break;
         }
     }
+
+
+
+    private void createLocationCallback() {
+        locationCallback = new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                location = locationResult.getLastLocation();
+                OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()));
+
+                    locationWebSocket.send(new Gson().toJson(outputInfo));
+            }
+        };
+    }
+
+    private void createLocationRequest() {
+        locationRequest = new LocationRequest();
+        locationRequest.setInterval(10000);
+        locationRequest.setFastestInterval(5000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    private void buildSettingLocationRequest() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(locationRequest);
+        locationSettingsRequest = builder.build();
+    }
+
+    private void startLocationUpdate() {
+        settingsClient.checkLocationSettings(locationSettingsRequest).addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
+            @SuppressLint("MissingPermission")
+            @Override
+            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                locationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
+            }}).addOnFailureListener(this, e -> {
+            int state = ((ApiException) e).getStatusCode();
+            switch (state) {
+                case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                    Log.e(TAG, "Location settings are not satisfied. Attempting to upgrade location settings ");
+                    try {
+                        // Show the dialog by calling startResolutionForResult(), and check the
+                        // result in onActivityResult().
+                        ResolvableApiException rae = (ResolvableApiException) e;
+                        rae.startResolutionForResult(this, REQUEST_CHECK_SETTINGS);
+                    } catch (IntentSender.SendIntentException sie) {
+                        Log.e(TAG, "PendingIntent unable to execute request.");
+                    }
+                    break;
+                case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                    String errorMessage = "Location settings are inadequate, and cannot be " +
+                            "fixed here. Fix in Settings.";
+                    Log.e(TAG, errorMessage);
+                    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void stopLocationUpdates() {
+        // It is a good practice to remove location requests when the activity is in a paused or
+        // stopped state. Doing so helps battery performance and is especially
+        // recommended in applications that request frequent location updates.
+        locationProviderClient.removeLocationUpdates(locationCallback)
+                .addOnCompleteListener(this, task -> Log.e(TAG, "Cancel location updates requested"));
+    }
+
+    @Override
+    public Driver driverCallBack() {
+        return driver;
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    public Location locationCallBack() {
+
+
+        return location;
+    }
+
 }

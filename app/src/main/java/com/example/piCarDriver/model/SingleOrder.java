@@ -1,4 +1,4 @@
-package com.example.piCarDriver;
+package com.example.piCarDriver.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;

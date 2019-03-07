@@ -1,5 +1,6 @@
 package com.example.piCarDriver.task;
 
+import android.content.Context;
 import android.os.AsyncTask;
 
 import com.example.piCarDriver.MainActivity;
@@ -18,8 +19,8 @@ import java.net.URL;
 public class LoginTask extends AsyncTask<String, Void, String> {
     private WeakReference<MainActivity> context;
     private ProgressDialogFragment fragment;
-    public LoginTask(MainActivity context) {
-        this.context = new WeakReference<>(context);
+    public LoginTask(Context context) {
+        this.context = new WeakReference<>((MainActivity)context);
     }
 
     @Override

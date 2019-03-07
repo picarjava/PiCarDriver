@@ -1,5 +1,6 @@
 package com.example.piCarDriver.orderPageFragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -10,12 +11,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.model.SingleOrder;
 import com.example.piCarDriver.Util;
-import com.example.piCarDriver.orderAdapter.SingleOrderAdapter;
+import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.orderAdapter.GroupOrderAdapter;
 import com.example.piCarDriver.task.OrderTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -26,10 +26,16 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class SingleOrderPageFragment extends Fragment {
-    private final static String TAG = "SingleOrderPageFragment";
-    private List<SingleOrder> orders;
+public class GroupOrderPageFragment extends Fragment {
+    private final static String TAG = "LongTermOrderPageFragment";
+    private List<List<GroupOrder>> orders;
+    private DriverCallBack driverCallBack;
 
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        driverCallBack = (DriverCallBack) context;
+    }
 
     @Nullable
     @Override
@@ -39,13 +45,12 @@ public class SingleOrderPageFragment extends Fragment {
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         try {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("action", "getNewSingleOrder");
-            String jsonIn = new OrderTask(getActivity()).execute(Util.URL + "/singleOrderApi", jsonObject.toString()).get();
+            jsonObject.addProperty("action", "getGroupOrder");
+            String jsonIn = new OrderTask(getActivity()).execute(Util.URL + "/groupOrderApi", jsonObject.toString()).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
-            Type type =  new TypeToken<List<SingleOrder>>(){}.getType();
+            Type type =  new TypeToken<List<List<GroupOrder>>>(){}.getType();
             orders = gson.fromJson(jsonIn, type);
-            Driver driver = ((DriverCallBack) getContext()).driverCallBack();
-            recyclerView.setAdapter(new SingleOrderAdapter(orders, driver));
+            recyclerView.setAdapter(new GroupOrderAdapter(orders, driverCallBack.driverCallBack()));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {
             e.printStackTrace();
@@ -55,5 +60,4 @@ public class SingleOrderPageFragment extends Fragment {
 
         return view;
     }
-
 }
