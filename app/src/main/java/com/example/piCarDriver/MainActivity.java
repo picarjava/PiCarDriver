@@ -75,31 +75,33 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
-
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-
-        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
-        String account = preferences.getString("account", "");
-        String password = preferences.getString("password", "");
-        // ask Permission
-        askPermissions();
         locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         settingsClient = LocationServices.getSettingsClient(this);
         createLocationCallback();
         createLocationRequest();
         buildSettingLocationRequest();
+
+    }
+
+    @SuppressLint("MissingPermission")
+    @Override
+    protected void onStart() {
+        super.onStart();
+        askPermissions();
+        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
+        String account = preferences.getString("account", "");
+        String password = preferences.getString("password", "");
         if (preferences.getBoolean("login", false)) {
-            if (!isValidLogin(Util.URL + "/driverApi", account, password))
+            if (!isLogin || !isValidLogin(Util.URL + "/driverApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
             else {
                 URI uri = null;
@@ -122,12 +124,6 @@ public class MainActivity extends AppCompatActivity
             }
         } else
             startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        askPermissions();
     }
 
     @Override
