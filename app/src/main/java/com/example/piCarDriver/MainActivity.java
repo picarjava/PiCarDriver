@@ -89,6 +89,14 @@ public class MainActivity extends AppCompatActivity
         createLocationCallback();
         createLocationRequest();
         buildSettingLocationRequest();
+        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
+        String account = preferences.getString("account", "");
+        String password = preferences.getString("password", "");
+        if (preferences.getBoolean("login", false)) {
+            if (!isLogin || !isValidLogin(Util.URL + "/driverApi", account, password))
+                startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+        } else
+            startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
 
     }
 
@@ -97,45 +105,42 @@ public class MainActivity extends AppCompatActivity
     protected void onStart() {
         super.onStart();
         askPermissions();
-        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
-        String account = preferences.getString("account", "");
-        String password = preferences.getString("password", "");
-        if (preferences.getBoolean("login", false)) {
-            if (!isLogin || !isValidLogin(Util.URL + "/driverApi", account, password))
-                startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
-            else {
-                URI uri = null;
-                try {
-                    uri = new URI(Util.URL + "/locationWebSocket/" + driver.getDriverID());
-                } catch (URISyntaxException e) {
-                    e.printStackTrace();
-                }
-
-                locationWebSocket = new LocationWebSocket(uri);
-                locationWebSocket.connect();
-                locationProviderClient.getLastLocation()
-                        .addOnSuccessListener(
-                                location -> {
-                                    this.location = location;
-                                    getSupportFragmentManager().beginTransaction()
-                                            .replace(R.id.frameLayout, new MapFragment(), "Map")
-                                            .commit();
-                                });
-            }
-        } else
-            startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+        locationProviderClient.getLastLocation()
+                              .addOnSuccessListener(
+                                  location -> {
+                                  this.location = location;
+                                  getSupportFragmentManager().beginTransaction()
+                                                             .replace(R.id.frameLayout, new MapFragment(), "Map")
+                                                             .commit();
+                                  });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        startLocationUpdate();
+        if (isLogin) {
+            URI uri = null;
+            try {
+                uri = new URI(Util.URL + "/locationWebSocket/" + driver.getDriverID());
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+
+            if (locationWebSocket == null)
+                locationWebSocket = new LocationWebSocket(uri);
+            if(locationWebSocket.isClosed())
+                locationWebSocket.connect();
+
+            startLocationUpdate();
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         stopLocationUpdates();
+        if (locationWebSocket != null)
+            locationWebSocket.close();
     }
 
     @Override
@@ -150,8 +155,6 @@ public class MainActivity extends AppCompatActivity
                 super.onBackPressed();
         }
     }
-
-
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
@@ -239,7 +242,6 @@ public class MainActivity extends AppCompatActivity
                             .putString("account", account)
                             .putString("password", password)
                             .apply();
-                    Log.d(TAG, jsonObject.toString());
                     driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
                                               .fromJson(jsonObject.get("driver").getAsString(), Driver.class);
@@ -288,7 +290,6 @@ public class MainActivity extends AppCompatActivity
                     break;
         }
     }
-
 
 
     private void createLocationCallback() {
@@ -343,6 +344,7 @@ public class MainActivity extends AppCompatActivity
                             "fixed here. Fix in Settings.";
                     Log.e(TAG, errorMessage);
                     Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+                    break;
             }
         });
     }
@@ -352,7 +354,7 @@ public class MainActivity extends AppCompatActivity
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
         locationProviderClient.removeLocationUpdates(locationCallback)
-                .addOnCompleteListener(this, task -> Log.e(TAG, "Cancel location updates requested"));
+                              .addOnCompleteListener(this, task -> Log.e(TAG, "Cancel location updates requested"));
     }
 
     @Override
@@ -360,11 +362,8 @@ public class MainActivity extends AppCompatActivity
         return driver;
     }
 
-    @SuppressLint("MissingPermission")
     @Override
     public Location locationCallBack() {
-
-
         return location;
     }
 
