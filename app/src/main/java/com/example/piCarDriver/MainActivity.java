@@ -53,12 +53,13 @@ import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
-                   DriverCallBack, LocationNowCallBack {
+        DriverCallBack, LocationNowCallBack {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
     private static final int REQUEST_CHECK_SETTINGS = 1;
     private static Driver driver;
+    private boolean isLogin;
     private FusedLocationProviderClient locationProviderClient;
     private SettingsClient settingsClient;
     private LocationCallback locationCallback;
@@ -84,7 +85,7 @@ public class MainActivity extends AppCompatActivity
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView =  findViewById(R.id.nav_view);
+        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
@@ -92,7 +93,12 @@ public class MainActivity extends AppCompatActivity
         String password = preferences.getString("password", "");
         // ask Permission
         askPermissions();
-        if (preferences.getBoolean("login", false))
+        locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        settingsClient = LocationServices.getSettingsClient(this);
+        createLocationCallback();
+        createLocationRequest();
+        buildSettingLocationRequest();
+        if (preferences.getBoolean("login", false)) {
             if (!isValidLogin(Util.URL + "/driverApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
             else {
@@ -105,28 +111,29 @@ public class MainActivity extends AppCompatActivity
 
                 locationWebSocket = new LocationWebSocket(uri);
                 locationWebSocket.connect();
-                locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-                settingsClient = LocationServices.getSettingsClient(this);
-                createLocationCallback();
-                createLocationRequest();
-                buildSettingLocationRequest();
                 locationProviderClient.getLastLocation()
-                                      .addOnSuccessListener(
-                                              location -> {
-                                                  this.location = location;
-                                                  getSupportFragmentManager().beginTransaction()
-                                                                             .replace(R.id.frameLayout, new MapFragment(), "Map")
-                                                                             .commit();
-
-                                              });
+                        .addOnSuccessListener(
+                                location -> {
+                                    this.location = location;
+                                    getSupportFragmentManager().beginTransaction()
+                                            .replace(R.id.frameLayout, new MapFragment(), "Map")
+                                            .commit();
+                                });
             }
+        } else
+            startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        askPermissions();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         startLocationUpdate();
-
     }
 
     @Override
@@ -201,6 +208,16 @@ public class MainActivity extends AppCompatActivity
                 String password = data.getStringExtra("password");
                 if(!isValidLogin(Util.URL + "/driverApi", account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+
+                URI uri = null;
+                try {
+                    uri = new URI(Util.URL + "/locationWebSocket/" + driver.getDriverID());
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+
+                locationWebSocket = new LocationWebSocket(uri);
+                locationWebSocket.connect();
             }
         }
     }
@@ -230,11 +247,13 @@ public class MainActivity extends AppCompatActivity
                     driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
                                               .fromJson(jsonObject.get("driver").getAsString(), Driver.class);
+                    isLogin = true;
                     return true;
                 }
             }
         }
 
+        isLogin = false;
         return false;
     }
 
@@ -282,9 +301,10 @@ public class MainActivity extends AppCompatActivity
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 location = locationResult.getLastLocation();
-                OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()));
-
+                if (isLogin) {
+                    OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()));
                     locationWebSocket.send(new Gson().toJson(outputInfo));
+                }
             }
         };
     }
