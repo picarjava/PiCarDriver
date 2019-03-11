@@ -16,16 +16,14 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MenuItem;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.example.piCarDriver.task.LoginTask;
@@ -51,9 +49,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,
-        DriverCallBack, LocationNowCallBack {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener,
+                                                               DriverCallBack, LocationNowCallBack {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
@@ -73,17 +70,15 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
+        ImageView hamburger = findViewById(R.id.hamburger);
+        hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+        askPermissions();
         locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         settingsClient = LocationServices.getSettingsClient(this);
         createLocationCallback();
@@ -93,7 +88,7 @@ public class MainActivity extends AppCompatActivity
         String account = preferences.getString("account", "");
         String password = preferences.getString("password", "");
         if (preferences.getBoolean("login", false)) {
-            if (!isLogin || !isValidLogin(Util.URL + "/driverApi", account, password))
+            if (!isValidLogin(Util.URL + "/driverApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
         } else
             startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
@@ -104,10 +99,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
-        askPermissions();
         locationProviderClient.getLastLocation()
-                              .addOnSuccessListener(
-                                  location -> {
+                              .addOnSuccessListener(location -> {
                                   this.location = location;
                                   getSupportFragmentManager().beginTransaction()
                                                              .replace(R.id.frameLayout, new MapFragment(), "Map")
@@ -128,7 +121,7 @@ public class MainActivity extends AppCompatActivity
 
             if (locationWebSocket == null)
                 locationWebSocket = new LocationWebSocket(uri);
-            if(locationWebSocket.isClosed())
+            if(!locationWebSocket.isOpen())
                 locationWebSocket.connect();
 
             startLocationUpdate();
@@ -162,26 +155,20 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         FragmentManager manager = getSupportFragmentManager();
-        FragmentTransaction transaction = manager.beginTransaction();
-        Fragment preferenceFrag = manager.findFragmentByTag("Preference");
-        Fragment order = manager.findFragmentByTag("Order");
         if (id == R.id.nav_order) {
-            if (preferenceFrag != null)
-                manager.popBackStack();
-
-            if (order == null)
-                transaction.replace(R.id.frameLayout, new OrderFragment(), "Order")
-                           .addToBackStack("Order")
-                           .commit();
+            String order = "Order";
+            manager.popBackStack(order, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            manager.beginTransaction()
+                   .replace(R.id.frameLayout, new OrderFragment(), order)
+                   .addToBackStack(order)
+                   .commit();
         } else if (id == R.id.nav_favor_setting) {
-            if (order != null)
-                manager.popBackStack();
-
-            if (preferenceFrag == null)
-                manager.beginTransaction()
-                       .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
-                       .addToBackStack("PreferenceFragment")
-                       .commit();
+            String preference = "Preference";
+            manager.popBackStack(preference, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            manager.beginTransaction()
+                   .replace(R.id.frameLayout, new PreferenceFragment(), preference)
+                   .addToBackStack(preference)
+                   .commit();
         } else if (id == R.id.nav_logout) {
             SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
             preferences.edit()
