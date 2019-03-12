@@ -13,10 +13,9 @@ import android.view.ViewGroup;
 
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.Util;
 import com.example.piCarDriver.model.GroupOrder;
 import com.example.piCarDriver.orderAdapter.GroupOrderAdapter;
-import com.example.piCarDriver.task.OrderTask;
+import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -46,7 +45,7 @@ public class GroupOrderPageFragment extends Fragment {
         try {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("action", "getGroupOrder");
-            String jsonIn = new OrderTask(getActivity()).execute(Util.URL + "/groupOrderApi", jsonObject.toString()).get();
+            String jsonIn = new CommonTask().execute("/groupOrderApi", jsonObject.toString()).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
             Type type =  new TypeToken<List<List<GroupOrder>>>(){}.getType();
             orders = gson.fromJson(jsonIn, type);

@@ -14,9 +14,8 @@ import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.SingleOrder;
-import com.example.piCarDriver.Util;
 import com.example.piCarDriver.orderAdapter.SingleOrderAdapter;
-import com.example.piCarDriver.task.OrderTask;
+import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -40,7 +39,7 @@ public class SingleOrderPageFragment extends Fragment {
         try {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("action", "getNewSingleOrder");
-            String jsonIn = new OrderTask(getActivity()).execute(Util.URL + "/singleOrderApi", jsonObject.toString()).get();
+            String jsonIn = new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
             Type type =  new TypeToken<List<SingleOrder>>(){}.getType();
             orders = gson.fromJson(jsonIn, type);

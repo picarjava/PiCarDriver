@@ -12,7 +12,7 @@ import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.Util;
 import com.example.piCarDriver.model.GroupOrder;
-import com.example.piCarDriver.task.OrderTask;
+import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -88,7 +88,7 @@ class ViewHolder extends RecyclerView.ViewHolder {
                     orderIDs.add(o.getgOrderID());
 
                 jsonOut.addProperty("orderID", new Gson().toJson(orderIDs));
-                new OrderTask(view.getContext()).execute(Util.URL + "/singleOrderApi", jsonOut.toString()).get();
+                new CommonTask().execute(Util.URL + "/singleOrderApi", jsonOut.toString()).get();
                 ordersList.remove(position);
                 notifyItemRemoved(position);
             } catch (ExecutionException e) {

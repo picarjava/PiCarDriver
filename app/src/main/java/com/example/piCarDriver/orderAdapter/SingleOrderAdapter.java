@@ -12,7 +12,7 @@ import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.SingleOrder;
 import com.example.piCarDriver.Util;
-import com.example.piCarDriver.task.OrderTask;
+import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.JsonObject;
 
 import java.text.SimpleDateFormat;
@@ -69,7 +69,7 @@ public class SingleOrderAdapter extends RecyclerView.Adapter<SingleOrderAdapter.
                 jsonOut.addProperty("action", "takeSingleOrder");
                 jsonOut.addProperty("driverID", driver.getDriverID());
                 jsonOut.addProperty("orderID", orders.get(position).getOrderID());
-                new OrderTask(view.getContext()).execute(Util.URL + "/singleOrderApi", jsonOut.toString()).get();
+                new CommonTask().execute(Util.URL + "/singleOrderApi", jsonOut.toString()).get();
                 orders.remove(position);
                 notifyItemRemoved(position);
             } catch (ExecutionException e) {

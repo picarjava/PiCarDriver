@@ -23,10 +23,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.piCarDriver.task.LoginTask;
+import com.example.piCarDriver.task.CommonTask;
+import com.example.piCarDriver.task.ImageTask;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -55,8 +58,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
     private static final int REQUEST_CHECK_SETTINGS = 1;
-    private static Driver driver;
+    private Driver driver;
+    private String driverName;
     private boolean isLogin;
+    private NavigationView navigationView;
     private FusedLocationProviderClient locationProviderClient;
     private SettingsClient settingsClient;
     private LocationCallback locationCallback;
@@ -70,13 +75,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ImageView hamburger = findViewById(R.id.hamburger);
         hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
-        NavigationView navigationView = findViewById(R.id.nav_view);
+        navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         askPermissions();
         locationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -88,8 +92,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         String account = preferences.getString("account", "");
         String password = preferences.getString("password", "");
         if (preferences.getBoolean("login", false)) {
-            if (!isValidLogin(Util.URL + "/driverApi", account, password))
+            if (isInvalidLogin(account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+            else
+                storeDriverInfo();
         } else
             startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
 
@@ -105,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                   getSupportFragmentManager().beginTransaction()
                                                              .replace(R.id.frameLayout, new MapFragment(), "Map")
                                                              .commit();
-                                  });
+                              });
     }
 
     @Override
@@ -192,28 +198,30 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             if (requestCode == SEQ_LOGIN) {
                 String account = data.getStringExtra("account");
                 String password = data.getStringExtra("password");
-                if(!isValidLogin(Util.URL + "/driverApi", account, password))
+                if(isInvalidLogin(account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
-
-                URI uri = null;
-                try {
-                    uri = new URI(Util.URL + "/locationWebSocket/" + driver.getDriverID());
-                } catch (URISyntaxException e) {
-                    e.printStackTrace();
-                }
-
-                locationWebSocket = new LocationWebSocket(uri);
-                locationWebSocket.connect();
+                else
+                    storeDriverInfo();
             }
         }
     }
 
-    private boolean isValidLogin(String url, String account, String password) {
+    private void storeDriverInfo() {
+        View view = navigationView.getHeaderView(0);
+        TextView name = view.findViewById(R.id.driverName);
+        name.setText(driverName);
+    }
+
+    private boolean isInvalidLogin(String account, String password) {
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         if (isNetworkConnected()) {
             String jsonIn = null;
             try {
-                jsonIn = new LoginTask(this).execute(url, account, password).get();
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.addProperty("action", "login");
+                jsonObject.addProperty("account", account);
+                jsonObject.addProperty("password", password);
+                jsonIn = new CommonTask().execute("/driverApi", jsonObject.toString()).get();
             } catch (ExecutionException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
@@ -224,22 +232,33 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 Log.d(TAG, jsonIn);
                 JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
                 if (jsonObject.has("auth") && "OK".equals(jsonObject.get("auth").getAsString())) {
+                    driverName = jsonObject.get("driverName").getAsString();
                     preferences.edit()
-                            .putBoolean("login", true)
-                            .putString("account", account)
-                            .putString("password", password)
-                            .apply();
+                               .putBoolean("login", true)
+                               .putString("account", account)
+                               .putString("password", password)
+                               .apply();
                     driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
                                               .fromJson(jsonObject.get("driver").getAsString(), Driver.class);
+                    jsonObject = new JsonObject();
+                    jsonObject.addProperty("action", "getPicture");
+                    jsonObject.addProperty("memID", driver.getMemID());
+                    try {
+                        new ImageTask(this).execute("/memberApi", jsonObject.toString()).get();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     isLogin = true;
-                    return true;
+                    return false;
                 }
             }
         }
 
         isLogin = false;
-        return false;
+        return true;
     }
 
     private boolean isNetworkConnected() {
@@ -278,12 +297,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-
     private void createLocationCallback() {
         locationCallback = new LocationCallback(){
             @Override
             public void onLocationResult(LocationResult locationResult) {
-                super.onLocationResult(locationResult);
                 location = locationResult.getLastLocation();
                 if (isLogin) {
                     OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()));
@@ -353,5 +370,4 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public Location locationCallBack() {
         return location;
     }
-
 }
