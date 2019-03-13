@@ -3,7 +3,7 @@ package com.example.piCarDriver.task;
 import android.os.AsyncTask;
 
 import com.example.piCarDriver.ProgressDialogFragment;
-import com.example.piCarDriver.Util;
+import com.example.piCarDriver.Constants;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -22,7 +22,7 @@ public class CommonTask extends AsyncTask<String, Void, String> {
         String url = strings[0];
         String jsonIn = null;
         try {
-            jsonIn = getRemoteData(Util.URL + url, strings[1]);
+            jsonIn = getRemoteData(Constants.URL + url, strings[1]);
         } catch (IOException e) {
             e.printStackTrace();
         }

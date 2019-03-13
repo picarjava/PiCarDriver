@@ -1,6 +1,10 @@
 package com.example.piCarDriver;
 
+import android.os.Handler;
 import android.util.Log;
+
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_6455;
@@ -10,9 +14,15 @@ import java.net.URI;
 
 public class LocationWebSocket extends WebSocketClient {
     private final static String TAG = "LocationWebSocket";
+    private android.os.Handler handler;
 
-    public LocationWebSocket(URI serverUri) {
+    public interface OnMessageCallBack {
+        void onMessageCallBack(String message);
+    }
+
+    public LocationWebSocket(Handler handler, URI serverUri) {
         super(serverUri, new Draft_6455());
+        this.handler = handler;
     }
 
     @Override
@@ -22,7 +32,10 @@ public class LocationWebSocket extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
-
+        JsonObject jsonObject = new GsonBuilder().setDateFormat("yyyy-MM-dd mm:ss").create().fromJson(message, JsonObject.class);
+        if (jsonObject.has("singleOrder"))
+            Log.d(TAG, jsonObject.get("singleOrder").getAsString());
+        handler.obtainMessage(Constants.ON_WEB_SOCKET_RECEIVED, message).sendToTarget();
     }
 
     @Override
