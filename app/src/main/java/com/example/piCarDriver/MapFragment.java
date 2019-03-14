@@ -21,6 +21,8 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.example.piCarDriver.model.SingleOrder;
+import com.example.piCarDriver.webSocket.LocationWebSocket;
+import com.example.piCarDriver.webSocket.WebSocketHandler;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -29,7 +31,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -40,7 +41,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -53,7 +53,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback, WebSocketHandler.DrawDirectionCallBack {
     private final static String TAG = "MapFragment";
@@ -71,7 +73,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private LocationWebSocket locationWebSocket;
     private Driver driver;
     private DirectionTask directionTask;
-    private List<LatLng> latLngs;
+    private AnimateTask animateTask;
+    private ArriveStartLocTask arriveStartLocTask;
 
     @Override
     public void onAttach(Context context) {
@@ -127,20 +130,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 isOnline = false;
             }
         });
+
         return view;
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        offline();
-    }
-
-    private void offline() {
-        stopLocationUpdates();
         if (directionTask != null)
             directionTask.cancel(true);
+        if (animateTask != null)
+            animateTask.cancel(true);
     }
+
 
     @SuppressLint("MissingPermission")
     @Override
@@ -155,8 +157,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         map.getUiSettings().setAllGesturesEnabled(false);
     }
-
-
 
     private void createLocationCallback() {
         locationCallback = new LocationCallback(){
@@ -184,34 +184,32 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         locationSettingsRequest = builder.build();
     }
 
+    @SuppressLint("MissingPermission")
     public void startLocationUpdate() {
-        settingsClient.checkLocationSettings(locationSettingsRequest).addOnSuccessListener(activity, new OnSuccessListener<LocationSettingsResponse>() {
-            @SuppressLint("MissingPermission")
-            @Override
-            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                locationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper());
-            }}).addOnFailureListener(activity, e -> {
-            int state = ((ApiException) e).getStatusCode();
-            switch (state) {
-                case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                    Log.e(TAG, "Location settings are not satisfied. Attempting to upgrade location settings ");
-                    try {
-                        // Show the dialog by calling startResolutionForResult(), and check the
-                        // result in onActivityResult().
-                        ResolvableApiException rae = (ResolvableApiException) e;
-                        rae.startResolutionForResult(activity, REQUEST_CHECK_SETTINGS);
-                    } catch (IntentSender.SendIntentException sie) {
-                        Log.e(TAG, "PendingIntent unable to execute request.");
-                    }
-                    break;
-                case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                    String errorMessage = "Location settings are inadequate, and cannot be " +
-                            "fixed here. Fix in Settings.";
-                    Log.e(TAG, errorMessage);
-                    Toast.makeText(activity, errorMessage, Toast.LENGTH_LONG).show();
-                    break;
-            }
-        });
+        settingsClient.checkLocationSettings(locationSettingsRequest)
+                      .addOnSuccessListener(activity, locationSettingsResponse -> locationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper()))
+                      .addOnFailureListener(activity, e -> {
+                         int state = ((ApiException) e).getStatusCode();
+                         switch (state) {
+                             case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                                 Log.e(TAG, "Location settings are not satisfied. Attempting to upgrade location settings ");
+                                 try {
+                                     // Show the dialog by calling startResolutionForResult(), and check the
+                                     // result in onActivityResult().
+                                     ResolvableApiException rae = (ResolvableApiException) e;
+                                     rae.startResolutionForResult(activity, REQUEST_CHECK_SETTINGS);
+                                 } catch (IntentSender.SendIntentException sie) {
+                                     Log.e(TAG, "PendingIntent unable to execute request.");
+                                 }
+
+                                 break;
+                             case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                                 String errorMessage = "Location settings are inadequate, and cannot be fixed here. Fix in Settings.";
+                                 Log.e(TAG, errorMessage);
+                                 Toast.makeText(activity, errorMessage, Toast.LENGTH_LONG).show();
+                                 break;
+                         }
+                      });
     }
 
     public void stopLocationUpdates() {
@@ -225,25 +223,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     @Override
     public void drawDirectionCallBack(String message) {
         Log.i(TAG, Thread.currentThread().getName());
-        offline();
+        locationWebSocket.close();
         online.setVisibility(View.INVISIBLE);
         online.setText("上線");
         isOnline = false;
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd mm:ss").create();
         JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
-        SingleOrder singleOrder = null;
-        if (jsonObject.has("singleOrder"))
-            singleOrder = gson.fromJson(jsonObject.get("singleOrder").getAsString(), SingleOrder.class);
-
-        assert singleOrder != null;
-        directionTask = new DirectionTask(this, map, new LatLng(location.getLatitude(), location.getLongitude()), new LatLng(singleOrder.getEndLat(), singleOrder.getEndLng()));
-        directionTask.execute(Constants.GOOGLE_DIRECTION_URL + "origin=" + location.getLatitude() + "," + location.getLongitude() +
-                              "&destination=" + singleOrder.getEndLat() + "," + singleOrder.getEndLng() + "&key=" + getString(R.string.direction_key));
+        if (jsonObject.has("singleOrder")) {
+            SingleOrder singleOrder = gson.fromJson(jsonObject.get("singleOrder").getAsString(), SingleOrder.class);
+            directionTask = new DirectionTask(this, map, new LatLng(location.getLatitude(), location.getLongitude()),
+                                              new LatLng(singleOrder.getStartLat(), singleOrder.getStartLng()));
+            directionTask.execute(getString(R.string.direction_key));
+        }
     }
 
+    @SuppressWarnings("unchecked")
     private void latLngsCallBack(List<LatLng> latLngs) {
-        this.latLngs = latLngs;
+        Log.d(TAG, "latLngsCallBack");
+        animateTask = new AnimateTask(this, map);
+        animateTask.execute(latLngs);
+    }
 
+    private static double calculateDistance(LatLng latLng1, LatLng latLng2) {
+        float result[] = new float[1];
+        Location.distanceBetween(latLng1.latitude, latLng1.longitude, latLng2.latitude, latLng2.longitude, result);
+        return result[0];
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
@@ -262,9 +266,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         @Override
         protected String doInBackground(String... strings) {
-            Log.d(TAG, strings[0]);
+            String origin = "origin=" + startLatLng.latitude + "," + startLatLng.longitude;
+            String destination = "&destination=" + endLatLng.latitude + "," + endLatLng.longitude;
+            String key = "&key=" + strings[0];
+            StringBuilder url = new StringBuilder().append(Constants.GOOGLE_DIRECTION_URL).append(origin).append(destination).append(key);
+            Log.d(TAG, url.toString());
             try {
-                HttpURLConnection connection = (HttpURLConnection) new URL(strings[0]).openConnection();
+                HttpURLConnection connection = (HttpURLConnection) new URL(url.toString()).openConnection();
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
                 connection.setUseCaches(false);
@@ -288,6 +296,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         @Override
         protected void onPostExecute(String jsonIn) {
+            Log.i(TAG, Thread.currentThread().getName());
             JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
             String encodeLine = jsonObject.get("routes").getAsJsonArray().get(0).getAsJsonObject().get("overview_polyline").getAsJsonObject().get("points").getAsString();
             List<LatLng> latLngs = PolyUtil.decode(encodeLine);
@@ -301,6 +310,70 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             latLngBounds = latLngBounds.including(center);
             map.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
             mapFragment.latLngsCallBack(latLngs);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static class AnimateTask extends AsyncTask<List<LatLng>, Queue<LatLng>, Void> {
+        private GoogleMap map;
+        private MapFragment mapFragment;
+
+        AnimateTask(MapFragment mapFragment,GoogleMap map) {
+            this.map = map;
+            this.mapFragment = mapFragment;
+        }
+
+        @Override
+        protected Void doInBackground(List<LatLng>... lists) {
+            Queue<LatLng> lngs = new LinkedList<>(lists[0]);
+            while (!lngs.isEmpty()) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                LatLng latLng = lngs.element();
+                Location location = new Location("");
+                location.setLatitude(latLng.latitude);
+                location.setLongitude(latLng.longitude);
+                mapFragment.location = location;
+                publishProgress(lngs);
+                lngs.poll();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Queue<LatLng>... values) {
+            map.clear();
+            map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(values[0]));
+        }
+    }
+
+    private static class ArriveStartLocTask extends AsyncTask<LatLng, Void, Void> {
+        private MapFragment mapFragment;
+
+        public ArriveStartLocTask(MapFragment mapFragment) {
+            this.mapFragment = mapFragment;
+        }
+
+        @Override
+        protected Void doInBackground(LatLng... latLngs) {
+            while (calculateDistance(latLngs[0], latLngs[1]) >= 3) {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+
         }
     }
 }

@@ -1,8 +1,9 @@
-package com.example.piCarDriver;
+package com.example.piCarDriver.webSocket;
 
 import android.os.Handler;
 import android.util.Log;
 
+import com.example.piCarDriver.Constants;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
@@ -15,10 +16,6 @@ import java.net.URI;
 public class LocationWebSocket extends WebSocketClient {
     private final static String TAG = "LocationWebSocket";
     private android.os.Handler handler;
-
-    public interface OnMessageCallBack {
-        void onMessageCallBack(String message);
-    }
 
     public LocationWebSocket(Handler handler, URI serverUri) {
         super(serverUri, new Draft_6455());
