@@ -39,10 +39,14 @@
         android:text="上線" />
 
     <android.support.v4.widget.NestedScrollView
+        android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="200dp"
+        android:translationZ="100dp"
+        
         app:layout_behavior="@string/bottom_sheet_behavior"
         android:visibility="invisible"
+        android:background="#ffffff"
         android:fillViewport="true">
 
 
@@ -52,6 +56,6 @@
             android:layout_width="150dp"
             android:layout_height="150dp"
             android:contentDescription="QRCode"
-            tools:srcCompat="@tools:sample/avatars" />
+            tools:srcCompat="@drawable/qr_code" />
     </android.support.v4.widget.NestedScrollView>
 </android.support.design.widget.CoordinatorLayout>

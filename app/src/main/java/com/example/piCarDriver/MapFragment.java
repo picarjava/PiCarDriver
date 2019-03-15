@@ -3,6 +3,7 @@ package com.example.piCarDriver;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentSender;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -13,11 +14,13 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.NestedScrollView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.example.piCarDriver.model.SingleOrder;
@@ -45,6 +48,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.maps.android.PolyUtil;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -70,8 +75,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private Location location;
     private MainActivity activity;
     private Button online;
+    private NestedScrollView bottomSheet;
+    private ImageView qrCode;
     private LocationWebSocket locationWebSocket;
     private Driver driver;
+    private SingleOrder singleOrder;
     private DirectionTask directionTask;
     private AnimateTask animateTask;
     private ArriveStartLocTask arriveStartLocTask;
@@ -91,6 +99,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         WebSocketHandler webSocketHandler = new WebSocketHandler(this);
         View view = inflater.inflate(R.layout.fragment_map, container, false);
         online = view.findViewById(R.id.online);
+        bottomSheet = view.findViewById(R.id.bottom_sheet);
+        qrCode = view.findViewById(R.id.imageView);
         FloatingActionButton fab = view.findViewById(R.id.fab);
         fab.setOnClickListener(v -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
         locationProviderClient = LocationServices.getFusedLocationProviderClient(activity);
@@ -107,6 +117,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                   this.location = location;
                                   mapFragment.getMapAsync(this);
                               });
+
         online.setOnClickListener(v -> {
             if (!isOnline) {
                 isOnline = true;
@@ -137,10 +148,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     @Override
     public void onPause() {
         super.onPause();
+        Log.d(TAG, "pause");
         if (directionTask != null)
             directionTask.cancel(true);
         if (animateTask != null)
             animateTask.cancel(true);
+        if (arriveStartLocTask != null)
+            arriveStartLocTask.cancel(true);
     }
 
 
@@ -223,6 +237,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     @Override
     public void drawDirectionCallBack(String message) {
         Log.i(TAG, Thread.currentThread().getName());
+        stopLocationUpdates();
         locationWebSocket.close();
         online.setVisibility(View.INVISIBLE);
         online.setText("上線");
@@ -230,10 +245,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd mm:ss").create();
         JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
         if (jsonObject.has("singleOrder")) {
-            SingleOrder singleOrder = gson.fromJson(jsonObject.get("singleOrder").getAsString(), SingleOrder.class);
+            singleOrder = gson.fromJson(jsonObject.get("singleOrder").getAsString(), SingleOrder.class);
             directionTask = new DirectionTask(this, map, new LatLng(location.getLatitude(), location.getLongitude()),
                                               new LatLng(singleOrder.getStartLat(), singleOrder.getStartLng()));
             directionTask.execute(getString(R.string.direction_key));
+            arriveStartLocTask = new ArriveStartLocTask(this);
+            Location startLocation = new Location("");
+            startLocation.setLatitude(singleOrder.getStartLat());
+            startLocation.setLongitude(singleOrder.getStartLng());
+            arriveStartLocTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, startLocation);
         }
     }
 
@@ -241,13 +261,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private void latLngsCallBack(List<LatLng> latLngs) {
         Log.d(TAG, "latLngsCallBack");
         animateTask = new AnimateTask(this, map);
-        animateTask.execute(latLngs);
-    }
-
-    private static double calculateDistance(LatLng latLng1, LatLng latLng2) {
-        float result[] = new float[1];
-        Location.distanceBetween(latLng1.latitude, latLng1.longitude, latLng2.latitude, latLng2.longitude, result);
-        return result[0];
+        animateTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
@@ -315,6 +329,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     @SuppressWarnings("unchecked")
     private static class AnimateTask extends AsyncTask<List<LatLng>, Queue<LatLng>, Void> {
+        private final static String TAG = "AnimateTask";
         private GoogleMap map;
         private MapFragment mapFragment;
 
@@ -326,21 +341,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         @Override
         protected Void doInBackground(List<LatLng>... lists) {
             Queue<LatLng> lngs = new LinkedList<>(lists[0]);
-            while (!lngs.isEmpty()) {
-                try {
+            try {
+                while (!lngs.isEmpty()) {
+                    Log.d(TAG, "driving");
                     Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    LatLng latLng = lngs.element();
+                    Location location = new Location("");
+                    location.setLatitude(latLng.latitude);
+                    location.setLongitude(latLng.longitude);
+                    mapFragment.location = location;
+                    publishProgress(lngs);
+                    lngs.poll();
                 }
-
-                LatLng latLng = lngs.element();
-                Location location = new Location("");
-                location.setLatitude(latLng.latitude);
-                location.setLongitude(latLng.longitude);
-                mapFragment.location = location;
-                publishProgress(lngs);
-                lngs.poll();
+            } catch (InterruptedException e) {
+                Log.d(TAG, "thread interrupted");
             }
+
             return null;
         }
 
@@ -351,21 +367,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         }
     }
 
-    private static class ArriveStartLocTask extends AsyncTask<LatLng, Void, Void> {
+    private static class ArriveStartLocTask extends AsyncTask<Location, Void, Void> {
+        private final static String TAG = "ArriveStartLocTask";
         private MapFragment mapFragment;
 
-        public ArriveStartLocTask(MapFragment mapFragment) {
+        ArriveStartLocTask(MapFragment mapFragment) {
             this.mapFragment = mapFragment;
         }
 
         @Override
-        protected Void doInBackground(LatLng... latLngs) {
-            while (calculateDistance(latLngs[0], latLngs[1]) >= 3) {
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+        protected Void doInBackground(Location... locations) {
+            try {
+                while (locations[0].distanceTo(mapFragment.location) >= 5) {
+                    Log.d(TAG, String.valueOf(locations[0].distanceTo(mapFragment.location)));
+                    Thread.sleep(1000);
                 }
+            } catch (InterruptedException e) {
+                Log.d(TAG, "thread interrupted");
             }
 
             return null;
@@ -373,7 +391,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         @Override
         protected void onPostExecute(Void aVoid) {
-
+            Log.d(TAG, "arrive");
+            try {
+                Bitmap qrCodeImage = new QRCodeEncoder(mapFragment.singleOrder.getOrderID(), null,
+                                                       Contents.Type.TEXT, BarcodeFormat.QR_CODE.toString(), 1500).encodeAsBitmap();
+                mapFragment.bottomSheet.setVisibility(View.VISIBLE);
+                mapFragment.qrCode.setImageBitmap(qrCodeImage);
+            } catch (WriterException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
