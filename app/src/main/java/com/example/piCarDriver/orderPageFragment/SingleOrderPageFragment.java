@@ -1,5 +1,6 @@
 package com.example.piCarDriver.orderPageFragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -28,7 +29,13 @@ import java.util.concurrent.ExecutionException;
 public class SingleOrderPageFragment extends Fragment {
     private final static String TAG = "SingleOrderPageFragment";
     private List<SingleOrder> orders;
+    private DriverCallBack driverCallBack;
 
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        driverCallBack = (DriverCallBack) context;
+    }
 
     @Nullable
     @Override
@@ -43,7 +50,7 @@ public class SingleOrderPageFragment extends Fragment {
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
             Type type =  new TypeToken<List<SingleOrder>>(){}.getType();
             orders = gson.fromJson(jsonIn, type);
-            Driver driver = ((DriverCallBack) getContext()).driverCallBack();
+            Driver driver = driverCallBack.driverCallBack();
             recyclerView.setAdapter(new SingleOrderAdapter(orders, driver));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {

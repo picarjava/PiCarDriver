@@ -3,7 +3,8 @@ package com.example.piCarDriver.webSocket;
 import android.os.Handler;
 import android.util.Log;
 
-import com.example.piCarDriver.Constants;
+import com.example.piCarDriver.model.SingleOrder;
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
@@ -29,10 +30,17 @@ public class LocationWebSocket extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
-        JsonObject jsonObject = new GsonBuilder().setDateFormat("yyyy-MM-dd mm:ss").create().fromJson(message, JsonObject.class);
-        if (jsonObject.has("singleOrder"))
-            Log.d(TAG, jsonObject.get("singleOrder").getAsString());
-        handler.obtainMessage(Constants.ON_WEB_SOCKET_RECEIVED, message).sendToTarget();
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd mm:ss").create();
+        JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
+        String singleOrder = "singleOrder";
+        String state = "state";
+        if (jsonObject.has(singleOrder)) {
+            SingleOrder vo = gson.fromJson(jsonObject.get(singleOrder).getAsString(), SingleOrder.class);
+            handler.obtainMessage(WebSocketHandler.SINGLE_ORDER_RECEIVED, vo).sendToTarget();
+        } else if (jsonObject.has(state)) {
+            if ("OK".equals(jsonObject.get(state).getAsString()))
+                handler.obtainMessage(WebSocketHandler.GET_IN_SUCCEED).sendToTarget();
+        }
     }
 
     @Override
