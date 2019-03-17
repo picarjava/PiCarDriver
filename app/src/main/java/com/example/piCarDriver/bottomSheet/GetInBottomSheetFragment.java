@@ -1,4 +1,4 @@
-package com.example.piCarDriver;
+package com.example.piCarDriver.bottomSheet;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import com.example.piCarDriver.Contents;
+import com.example.piCarDriver.QRCodeEncoder;
+import com.example.piCarDriver.R;
 import com.google.gson.JsonObject;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;

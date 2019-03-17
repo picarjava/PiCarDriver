@@ -5,7 +5,6 @@ import android.support.v4.app.Fragment;
 public class OrderPage {
     private Fragment fragment;
     private String title;
-    public OrderPage() {}
 
     public OrderPage(Fragment fragment, String title) {
         setFragment(fragment);

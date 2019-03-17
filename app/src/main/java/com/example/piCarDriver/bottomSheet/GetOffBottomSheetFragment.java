@@ -1,4 +1,4 @@
-package com.example.piCarDriver;
+package com.example.piCarDriver.bottomSheet;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -8,6 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+
+import com.example.piCarDriver.R;
 
 public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
     @Nullable

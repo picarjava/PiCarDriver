@@ -10,7 +10,6 @@ import android.widget.TextView;
 
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.Constants;
 import com.example.piCarDriver.model.GroupOrder;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
@@ -84,7 +83,7 @@ public class GroupOrderAdapter extends RecyclerView.Adapter<GroupOrderAdapter.Vi
                         orderIDs.add(o.getgOrderID());
 
                     jsonOut.addProperty("orderID", new Gson().toJson(orderIDs));
-                    new CommonTask().execute(Constants.URL + "/singleOrderApi", jsonOut.toString()).get();
+                    new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
                     orders.remove(position);
                     notifyItemRemoved(position);
                 } catch (ExecutionException e) {

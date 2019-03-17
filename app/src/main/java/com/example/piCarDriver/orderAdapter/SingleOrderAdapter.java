@@ -2,6 +2,7 @@ package com.example.piCarDriver.orderAdapter;
 
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +12,6 @@ import android.widget.TextView;
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.SingleOrder;
-import com.example.piCarDriver.Constants;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.JsonObject;
 
@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 
 
 public class SingleOrderAdapter extends RecyclerView.Adapter<SingleOrderAdapter.ViewHolder> {
+    private final static String TAG = "SingleOrderAdapter";
     private List<SingleOrder> orders;
     private Driver driver;
 
@@ -69,7 +70,9 @@ public class SingleOrderAdapter extends RecyclerView.Adapter<SingleOrderAdapter.
                 jsonOut.addProperty("action", "takeSingleOrder");
                 jsonOut.addProperty("driverID", driver.getDriverID());
                 jsonOut.addProperty("orderID", orders.get(position).getOrderID());
-                new CommonTask().execute(Constants.URL + "/singleOrderApi", jsonOut.toString()).get();
+
+                new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
+                Log.d(TAG, jsonOut.toString());
                 orders.remove(position);
                 notifyItemRemoved(position);
             } catch (ExecutionException e) {
