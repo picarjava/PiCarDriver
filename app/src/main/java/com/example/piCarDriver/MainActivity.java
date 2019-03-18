@@ -25,7 +25,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
-import com.example.piCarDriver.orderPageFragment.SingleOrderPageFragment;
+import com.example.piCarDriver.orderPageFragment.OrderPageFragment;
 import com.example.piCarDriver.task.CommonTask;
 import com.example.piCarDriver.task.ImageTask;
 import com.google.gson.Gson;
@@ -44,7 +44,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
-    private static final int REQUEST_CHECK_SETTINGS = 1;
     private Driver driver;
     private String driverName;
     private DrawerLayout drawer;
@@ -103,12 +102,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         int id = item.getItemId();
         if (id == R.id.nav_order) {
             orderPages = new ArrayList<>();
-            orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
-            orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
+            OrderPageFragment orderPageFragment = new OrderPageFragment();
+            passJsonToFragment(orderPageFragment, "/singleOrderApi","getNewSingleOrder");
+            orderPages.add(new OrderPage(orderPageFragment, "單人訂單"));
+            LongTermOrderPageFragment longTermOrderPageFragment = new LongTermOrderPageFragment();
+            passJsonToFragment(longTermOrderPageFragment, "/singleOrderApi", "getLongTermSingleOrder");
+            orderPages.add(new OrderPage(longTermOrderPageFragment, "長期訂單"));
             setNavigationItemFragment("Order", new OrderFragment());
         } else if (id == R.id.nav_schedule) {
             orderPages = new ArrayList<>();
-            orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
+            orderPages.add(new OrderPage(new OrderPageFragment(), "單人訂單"));
             orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
             setNavigationItemFragment("Schedule", new OrderFragment());
         } else if (id == R.id.nav_favor_setting) {
@@ -136,6 +139,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                .replace(R.id.frameLayout, fragment, tag)
                .addToBackStack(tag)
                .commit();
+    }
+
+    private void passJsonToFragment(Fragment fragment, String url, String action) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("action", action);
+        Bundle bundle = new Bundle();
+        bundle.putString("url", url);
+        bundle.putString("action", jsonObject.toString());
+        fragment.setArguments(bundle);
     }
 
     @Override

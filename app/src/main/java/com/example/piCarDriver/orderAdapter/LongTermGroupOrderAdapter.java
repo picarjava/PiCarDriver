@@ -10,7 +10,7 @@ import android.widget.TextView;
 
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -21,12 +21,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class LongTermGroupOrderAdapter extends RecyclerView.Adapter<LongTermGroupOrderAdapter.ViewHolder> {
-    private List<List<List<GroupOrder>>> ordersList;
+    private List<List<List<Order>>> ordersList;
     private Driver driver;
 
-    public LongTermGroupOrderAdapter(List<List<List<GroupOrder>>> orders, Driver driver) {
-            this.ordersList = orders;
-            this.driver = driver;
+    public LongTermGroupOrderAdapter(List<List<List<Order>>> orders, Driver driver) {
+        this.ordersList = orders;
+        this.driver = driver;
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -54,23 +54,23 @@ public class LongTermGroupOrderAdapter extends RecyclerView.Adapter<LongTermGrou
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View view = LayoutInflater.from(viewGroup.getContext())
-                                  .inflate(R.layout.view_group_order, viewGroup, false);
+                .inflate(R.layout.view_group_order, viewGroup, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
-        List<List<GroupOrder>> orders = ordersList.get(viewHolder.getAdapterPosition());
-        List<GroupOrder> order = orders.get(0);
+        List<List<Order>> orders = ordersList.get(viewHolder.getAdapterPosition());
+        List<Order> order = orders.get(0);
         viewHolder.startLoc.setText(order.get(0).getStartLoc());
         viewHolder.endLoc.setText(order.get(0).getEndLoc());
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm");
         viewHolder.startTime.setText(simpleDateFormat.format(order.get(0).getStartTime()));
         viewHolder.endTime.setText(simpleDateFormat.format(orders.get(orders.size() - 1).get(0).getStartTime()));
         int amount = (int) order.stream()
-                                .mapToDouble(GroupOrder::getTotalAmount)
-                                .reduce((acc, totalAmount)-> acc + totalAmount)
-                                .orElse(0);
+                .mapToDouble(Order::getTotalAmount)
+                .reduce((acc, totalAmount)-> acc + totalAmount)
+                .orElse(0);
         viewHolder.people.setText(String.valueOf(order.size()) + "人");
         viewHolder.amount.setText(String.valueOf(amount) + "元");
         viewHolder.btnAccept.setOnClickListener((View view) -> {
@@ -80,8 +80,8 @@ public class LongTermGroupOrderAdapter extends RecyclerView.Adapter<LongTermGrou
                 jsonOut.addProperty("action", "takeSingleOrder");
                 jsonOut.addProperty("driverID", driver.getDriverID());
                 List<String> orderIDs = order.stream()
-                                             .map(GroupOrder::getgOrderID)
-                                             .collect(Collectors.toList());
+                        .map(Order::getOrderID)
+                        .collect(Collectors.toList());
                 jsonOut.addProperty("orderID", new Gson().toJson(orderIDs));
                 new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
                 ordersList.remove(position);

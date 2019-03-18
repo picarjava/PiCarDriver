@@ -11,10 +11,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.Order;
-import com.example.piCarDriver.orderAdapter.LongTermOrderAdapter;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -25,15 +25,14 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class GroupOrderPageFragment extends Fragment {
-    private final static String TAG = "LongTermOrderPageFragment";
-    private List<List<Order>> orders;
-    private DriverCallBack driverCallBack;
+public class ScheduleOrderFragment extends Fragment {
+    private DriverCallBack activity;
+    private List<Order> orders;
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        driverCallBack = (DriverCallBack) context;
+        activity = (DriverCallBack) context;
     }
 
     @Nullable
@@ -44,12 +43,13 @@ public class GroupOrderPageFragment extends Fragment {
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         try {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("action", "getGroupOrder");
-            String jsonIn = new CommonTask().execute("/groupOrderApi", jsonObject.toString()).get();
+            jsonObject.addProperty("action", "getNewSingleOrder");
+            String jsonIn = new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
-            Type type =  new TypeToken<List<List<Order>>>(){}.getType();
+            Type type =  new TypeToken<List<Order>>(){}.getType();
             orders = gson.fromJson(jsonIn, type);
-            recyclerView.setAdapter(new LongTermOrderAdapter(orders, driverCallBack.driverCallBack()));
+            Driver driver = activity.driverCallBack();
+//            recyclerView.setAdapter(new OrderAdapter(orders, driver));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {
             e.printStackTrace();

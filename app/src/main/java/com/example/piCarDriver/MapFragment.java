@@ -23,7 +23,7 @@ import android.widget.Toast;
 
 import com.example.piCarDriver.bottomSheet.GetInBottomSheetFragment;
 import com.example.piCarDriver.bottomSheet.GetOffBottomSheetFragment;
-import com.example.piCarDriver.model.SingleOrder;
+import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.webSocket.LocationWebSocket;
 import com.example.piCarDriver.webSocket.WebSocketHandler;
 import com.google.android.gms.common.api.ApiException;
@@ -74,7 +74,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private Button online;
     private LocationWebSocket locationWebSocket;
     private Driver driver;
-    private SingleOrder singleOrder;
+    private Order order;
     private DirectionTask directionTask;
     private AnimateTask animateTask;
     private ArriveLocTask arriveLocTask;
@@ -220,33 +220,33 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     }
 
     @Override
-    public void drawDirectionCallBack(SingleOrder singleOrder) {
+    public void drawDirectionCallBack(Order order) {
         stopLocationUpdates();
         locationWebSocket.close();
         online.setVisibility(View.INVISIBLE);
         online.setText("上線");
         isOnline = false;
-        this.singleOrder = singleOrder;
+        this.order = order;
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
-                                          new LatLng(singleOrder.getStartLat(), singleOrder.getStartLng()));
+                                          new LatLng(order.getStartLat(), order.getStartLng()));
         directionTask.execute(getString(R.string.direction_key));
         arriveLocTask = new ArriveLocTask(this, false);
         Location startLocation = new Location("");
-        startLocation.setLatitude(singleOrder.getStartLat());
-        startLocation.setLongitude(singleOrder.getStartLng());
+        startLocation.setLatitude(order.getStartLat());
+        startLocation.setLongitude(order.getStartLng());
         arriveLocTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, startLocation);
     }
 
     @Override
     public void getInSuccessCallBack() {
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
-                                          new LatLng(singleOrder.getEndLat(), singleOrder.getEndLng()));
+                                          new LatLng(order.getEndLat(), order.getEndLng()));
         directionTask.execute(getString(R.string.direction_key));
         bottomSheetDialogFragment.dismiss();
         arriveLocTask = new ArriveLocTask(this, true);
         Location endLocation = new Location("");
-        endLocation.setLatitude(singleOrder.getEndLat());
-        endLocation.setLongitude(singleOrder.getEndLng());
+        endLocation.setLatitude(order.getEndLat());
+        endLocation.setLongitude(order.getEndLng());
         arriveLocTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
     }
 
@@ -386,9 +386,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected void onPostExecute(Void aVoid) {
             Log.d(TAG, "arrive");
             Bundle bundle = new Bundle();
-            SingleOrder singleOrder = mapFragment.singleOrder;
-            bundle.putString("driverID", singleOrder.getDriverID());
-            bundle.putString("orderID", singleOrder.getOrderID());
+            Order order = mapFragment.order;
+            bundle.putString("driverID", order.getDriverID());
+            bundle.putString("orderID", order.getOrderID());
             String tag;
             if (!isEnd) {
                 mapFragment.bottomSheetDialogFragment = new GetInBottomSheetFragment();

@@ -5,7 +5,7 @@ import android.os.Parcelable;
 
 import java.sql.Timestamp;
 
-public class SingleOrder implements Parcelable {
+public class Order implements Parcelable {
     private String orderID;
     private String driverID;
     private String memId;
@@ -24,7 +24,7 @@ public class SingleOrder implements Parcelable {
     private String note;
     private Timestamp launchTime;
 
-    public SingleOrder() {}
+    public Order() {}
 
     public String getOrderID() {
         return orderID;
@@ -197,7 +197,7 @@ public class SingleOrder implements Parcelable {
         dest.writeLong(this.launchTime.getTime());
     }
 
-    protected SingleOrder(Parcel in) {
+    protected Order(Parcel in) {
         this.orderID = in.readString();
         this.driverID = in.readString();
         this.memId = in.readString();
@@ -217,15 +217,15 @@ public class SingleOrder implements Parcelable {
         this.launchTime = new Timestamp(in.readLong());
     }
 
-    public static final Parcelable.Creator<SingleOrder> CREATOR = new Parcelable.Creator<SingleOrder>() {
+    public static final Parcelable.Creator<Order> CREATOR = new Parcelable.Creator<Order>() {
         @Override
-        public SingleOrder createFromParcel(Parcel source) {
-            return new SingleOrder(source);
+        public Order createFromParcel(Parcel source) {
+            return new Order(source);
         }
 
         @Override
-        public SingleOrder[] newArray(int size) {
-            return new SingleOrder[size];
+        public Order[] newArray(int size) {
+            return new Order[size];
         }
     };
 }

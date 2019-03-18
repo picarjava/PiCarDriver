@@ -10,7 +10,7 @@ import android.widget.TextView;
 
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.model.SingleOrder;
+import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -20,10 +20,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class LongTermOrderAdapter extends RecyclerView.Adapter<LongTermOrderAdapter.ViewHolder> {
-    private List<List<SingleOrder>> orders;
+    private List<List<Order>> orders;
     private Driver driver;
 
-    public LongTermOrderAdapter(List<List<SingleOrder>> orders, Driver driver) {
+    public LongTermOrderAdapter(List<List<Order>> orders, Driver driver) {
         this.orders = orders;
         this.driver = driver;
     }
@@ -58,22 +58,22 @@ public class LongTermOrderAdapter extends RecyclerView.Adapter<LongTermOrderAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
         int position = viewHolder.getAdapterPosition();
-        List<SingleOrder> ordersNow = orders.get(position);
-        SingleOrder startOrder = ordersNow.get(0);
-        SingleOrder endOrder = ordersNow.get(ordersNow.size() - 1);
+        List<Order> ordersNow = orders.get(position);
+        Order startOrder = ordersNow.get(0);
+        Order endOrder = ordersNow.get(ordersNow.size() - 1);
         viewHolder.startLoc.setText(startOrder.getStartLoc());
         viewHolder.endLoc.setText(startOrder.getEndLoc());
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm");
         viewHolder.startTime.setText(simpleDateFormat.format(startOrder.getStartTime()));
         viewHolder.endTime.setText(simpleDateFormat.format(endOrder.getStartTime()));
         int amount = (int) ordersNow.stream()
-                                    .mapToDouble(SingleOrder::getTotalAmount)
+                                    .mapToDouble(Order::getTotalAmount)
                                     .reduce((acc, totalAmount) -> acc + totalAmount)
                                     .orElse(0);
         viewHolder.amount.setText(String.valueOf(amount));
         viewHolder.btnAccept.setOnClickListener((view)->{
             List<String> orderIDs = ordersNow.stream()
-                                             .map(SingleOrder::getOrderID)
+                                             .map(Order::getOrderID)
                                              .collect(Collectors.toList());
             JsonObject jsonOut = new JsonObject();
             jsonOut.addProperty("action", "takeLongTermOrder");
