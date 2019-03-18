@@ -9,27 +9,28 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
 import com.example.piCarDriver.orderPageFragment.SingleOrderPageFragment;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class OrderFragment extends Fragment {
     private final static String TAG = "OrderFragment";
-    private AppCompatActivity activity;
+    private OrderPagesCallBack activity;
     private List<OrderPage> orderPages;
+
+    public interface OrderPagesCallBack {
+       List<OrderPage> orderPagesCallBack();
+    }
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        activity = (AppCompatActivity) context;
+        activity = (OrderPagesCallBack) context;
         Log.d(TAG, activity.getClass().toString());
     }
 
@@ -48,9 +49,7 @@ public class OrderFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_order, container, false);
         TabLayout tabLayout = view.findViewById(R.id.tabLayout);
         ViewPager viewPager = view.findViewById(R.id.viewPager);
-        orderPages = new ArrayList<>();
-        orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
-        orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
+        orderPages = activity.orderPagesCallBack();
         viewPager.setAdapter(new ViewPageAdapter(getChildFragmentManager(), orderPages));
         tabLayout.setupWithViewPager(viewPager);
         return view;

@@ -16,9 +16,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class LongTermOrderAdapter extends RecyclerView.Adapter<LongTermOrderAdapter.ViewHolder> {
     private List<List<SingleOrder>> orders;
@@ -52,7 +51,7 @@ public class LongTermOrderAdapter extends RecyclerView.Adapter<LongTermOrderAdap
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View view = LayoutInflater.from(viewGroup.getContext())
-                .inflate(R.layout.view_longterm_order, viewGroup, false);
+                                  .inflate(R.layout.view_longterm_order, viewGroup, false);
         return new ViewHolder(view);
     }
 
@@ -67,29 +66,22 @@ public class LongTermOrderAdapter extends RecyclerView.Adapter<LongTermOrderAdap
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm");
         viewHolder.startTime.setText(simpleDateFormat.format(startOrder.getStartTime()));
         viewHolder.endTime.setText(simpleDateFormat.format(endOrder.getStartTime()));
-        int amount = 0;
-        for (SingleOrder order: ordersNow)
-            amount += order.getTotalAmount();
-
+        int amount = (int) ordersNow.stream()
+                                    .mapToDouble(SingleOrder::getTotalAmount)
+                                    .reduce((acc, totalAmount) -> acc + totalAmount)
+                                    .orElse(0);
         viewHolder.amount.setText(String.valueOf(amount));
         viewHolder.btnAccept.setOnClickListener((view)->{
-            List<String> orderIDs = new ArrayList<>();
-            for (SingleOrder singleOrder: ordersNow)
-                orderIDs.add(singleOrder.getOrderID());
-
+            List<String> orderIDs = ordersNow.stream()
+                                             .map(SingleOrder::getOrderID)
+                                             .collect(Collectors.toList());
             JsonObject jsonOut = new JsonObject();
             jsonOut.addProperty("action", "takeLongTermOrder");
             jsonOut.addProperty("driverID", driver.getDriverID());
             jsonOut.addProperty("orderID", new Gson().toJson(orderIDs));
-            try {
-                new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
-                orders.remove(position);
-                notifyItemRemoved(position);
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            new CommonTask().execute("/singleOrderApi", jsonOut.toString());
+            orders.remove(position);
+            notifyItemRemoved(position);
         });
     }
 

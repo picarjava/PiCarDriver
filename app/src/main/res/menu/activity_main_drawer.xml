@@ -13,6 +13,11 @@
                 android:id="@+id/nav_favor_setting"
                 android:icon="@drawable/nav_favor_setting"
                 android:title="乘車設定" />
+            <item
+                android:id="@+id/nav_schedule"
+                android:icon="@drawable/nav_schedule"
+                android:title="排定訂單"
+                />
         </menu>
     </item>
 

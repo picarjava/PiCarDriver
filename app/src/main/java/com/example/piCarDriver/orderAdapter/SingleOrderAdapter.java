@@ -70,7 +70,6 @@ public class SingleOrderAdapter extends RecyclerView.Adapter<SingleOrderAdapter.
                 jsonOut.addProperty("action", "takeSingleOrder");
                 jsonOut.addProperty("driverID", driver.getDriverID());
                 jsonOut.addProperty("orderID", orders.get(position).getOrderID());
-
                 new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
                 Log.d(TAG, jsonOut.toString());
                 orders.remove(position);

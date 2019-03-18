@@ -112,7 +112,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                   this.location = location;
                                   mapFragment.getMapAsync(this);
                               });
-
         online.setOnClickListener(v -> {
             if (!isOnline) {
                 isOnline = true;
@@ -143,7 +142,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         if (arriveLocTask != null)
             arriveLocTask.cancel(true);
     }
-
 
     @SuppressLint("MissingPermission")
     @Override

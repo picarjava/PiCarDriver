@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,14 @@ import android.widget.Button;
 import android.widget.Switch;
 
 public class PreferenceFragment extends Fragment {
+    private AppCompatActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (AppCompatActivity) context;
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,7 +34,7 @@ public class PreferenceFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_preference, container, false);
-        final SharedPreferences preferences = getContext().getSharedPreferences(Constants.preference, Context.MODE_PRIVATE);
+        final SharedPreferences preferences = activity.getSharedPreferences(Constants.preference, Context.MODE_PRIVATE);
         final Switch smoke = view.findViewById(R.id.smoke);
         final Switch pet = view.findViewById(R.id.pet);
         final Switch babySeat = view.findViewById(R.id.babySeat);
@@ -34,30 +43,24 @@ public class PreferenceFragment extends Fragment {
         babySeat.setChecked(preferences.getBoolean("babySeat", false));
         Button btnSubmit = view.findViewById(R.id.prefSubmit);
         Button btnReset = view.findViewById(R.id.prefReset);
-        btnSubmit.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                preferences.edit()
-                        .putBoolean("smoke", smoke.isChecked())
-                        .putBoolean("pet", pet.isChecked())
-                        .putBoolean("babySeat", babySeat.isChecked())
-                        .apply();
-                getActivity().getSupportFragmentManager()
-                             .popBackStack();
-            }
+        btnSubmit.setOnClickListener(v -> {
+            preferences.edit()
+                    .putBoolean("smoke", smoke.isChecked())
+                    .putBoolean("pet", pet.isChecked())
+                    .putBoolean("babySeat", babySeat.isChecked())
+                    .apply();
+            activity.getSupportFragmentManager()
+                         .popBackStack();
         });
-        btnReset.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                preferences.edit()
-                           .putBoolean("smoke", false)
-                           .putBoolean("pet", false)
-                           .putBoolean("babySeat", false)
-                           .apply();
-                smoke.setChecked(false);
-                pet.setChecked(false);
-                babySeat.setChecked(false);
-            }
+        btnReset.setOnClickListener(v -> {
+            preferences.edit()
+                       .putBoolean("smoke", false)
+                       .putBoolean("pet", false)
+                       .putBoolean("babySeat", false)
+                       .apply();
+            smoke.setChecked(false);
+            pet.setChecked(false);
+            babySeat.setChecked(false);
         });
 
         return view;

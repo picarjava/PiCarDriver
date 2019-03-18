@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -23,18 +24,23 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
+import com.example.piCarDriver.orderPageFragment.SingleOrderPageFragment;
 import com.example.piCarDriver.task.CommonTask;
 import com.example.piCarDriver.task.ImageTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener,
-                                                               DriverCallBack {
+                                                               DriverCallBack,
+                                                               OrderFragment.OrderPagesCallBack {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
@@ -43,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private String driverName;
     private DrawerLayout drawer;
     private NavigationView navigationView;
+    private List<OrderPage> orderPages;
 
     @SuppressLint("MissingPermission")
     @Override
@@ -94,21 +101,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-        FragmentManager manager = getSupportFragmentManager();
         if (id == R.id.nav_order) {
-            String order = "Order";
-            manager.popBackStack(order, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            manager.beginTransaction()
-                   .replace(R.id.frameLayout, new OrderFragment(), order)
-                   .addToBackStack(order)
-                   .commit();
+            orderPages = new ArrayList<>();
+            orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
+            orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
+            setNavigationItemFragment("Order", new OrderFragment());
+        } else if (id == R.id.nav_schedule) {
+            orderPages = new ArrayList<>();
+            orderPages.add(new OrderPage(new SingleOrderPageFragment(), "單人訂單"));
+            orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
+            setNavigationItemFragment("Schedule", new OrderFragment());
         } else if (id == R.id.nav_favor_setting) {
-            String preference = "Preference";
-            manager.popBackStack(preference, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            manager.beginTransaction()
-                   .replace(R.id.frameLayout, new PreferenceFragment(), preference)
-                   .addToBackStack(preference)
-                   .commit();
+            setNavigationItemFragment("Preference", new PreferenceFragment());
         } else if (id == R.id.nav_logout) {
             SharedPreferences preferences = getSharedPreferences(Constants.preference, MODE_PRIVATE);
             preferences.edit()
@@ -123,6 +127,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void setNavigationItemFragment(String tag, Fragment fragment) {
+        FragmentManager manager = getSupportFragmentManager();
+        manager.popBackStack(tag, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        manager.beginTransaction()
+               .replace(R.id.frameLayout, fragment, tag)
+               .addToBackStack(tag)
+               .commit();
     }
 
     @Override
@@ -211,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
         if (!permissionRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUEST);
+            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[0]), PERMISSION_REQUEST);
         }
     }
 
@@ -234,4 +247,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return driver;
     }
 
+    @Override
+    public List<OrderPage> orderPagesCallBack() {
+        return orderPages;
+    }
 }
