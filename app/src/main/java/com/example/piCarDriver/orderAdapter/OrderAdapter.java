@@ -18,6 +18,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -68,6 +69,15 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         }
     }
 
+    class LongTermGroupOrderHolder extends GroupOrderHolder {
+        TextView endTime;
+
+        public LongTermGroupOrderHolder(@NonNull View view) {
+            super(view);
+            this.endTime = view.findViewById(R.id.endTime);
+        }
+    }
+
     @NonNull
     @Override
     public OrderHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
@@ -81,9 +91,13 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 view = LayoutInflater.from(viewGroup.getContext())
                                      .inflate(R.layout.view_longterm_order, viewGroup, false);
                 return new LongTermOrderHolder(view);
+            case OrderAdapterType.GROUP_ORDER:
+                view = LayoutInflater.from(viewGroup.getContext())
+                                     .inflate(R.layout.view_group_order, viewGroup, false);
+                return new GroupOrderHolder(view);
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                 view = LayoutInflater.from(viewGroup.getContext())
-                        .inflate(R.layout.view_longterm_group_order, viewGroup, false);
+                                     .inflate(R.layout.view_longterm_group_order, viewGroup, false);
                 return new LongTermOrderHolder(view);
         }
         return null;
@@ -96,23 +110,36 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         int viewType = orders.get(position).getViewType();
         Order order = null;
         int amount = 0;
+        int people;
         switch (viewType) {
             case OrderAdapterType.SINGLE_ORDER:
                 order = (Order) orders.get(position).getOrder();
                 amount = order.getTotalAmount();
                 break;
             case OrderAdapterType.LONG_TERM_ORDER:
+            case OrderAdapterType.GROUP_ORDER:
                 @SuppressWarnings("unchecked")
                 List<Order> lOrders = (List<Order>) orders.get(position).getOrder();
                 order = lOrders.get(0);
-                amount = (int) lOrders.stream()
-                                      .mapToDouble(Order::getTotalAmount)
-                                      .reduce((acc, totalAmount) -> acc + totalAmount)
-                                      .orElse(0);
+                amount = lOrders.stream()
+                                .mapToInt(Order::getTotalAmount)
+                                .reduce((acc, totalAmount) -> acc + totalAmount)
+                                .orElse(0);
                 ((LongTermOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lOrders.get(lOrders.size() - 1).getStartTime()));
                 break;
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                List<List<Order>> lgOrders;
+                @SuppressWarnings("unchecked")
+                List<List<Order>> lgOrders = (List<List<Order>>) orders.get(position).getOrder();
+                order = lgOrders.get(0).get(0);
+                amount = lgOrders.stream()
+                                 .flatMap(Collection::stream)
+                                 .mapToInt(Order::getTotalAmount)
+                                 .reduce((acc, c) -> acc + c)
+                                 .orElse(0);
+                people = lgOrders.get(0).size();
+                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lgOrders.get(lgOrders.size() - 1).get(0).getStartTime()));
+                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(people));
+                break;
         }
 
         assert order != null;
@@ -139,6 +166,26 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                                                        .map(Order::getOrderID)
                                                        .collect(Collectors.toList());
                         orderID = new Gson().toJson(orderIDs);
+                        break;
+                    case OrderAdapterType.GROUP_ORDER:
+                        @SuppressWarnings("unchecked")
+                        List<Order> gOrders = (List<Order>) orders.get(positionNow).getOrder();
+                        action = "takeGroupOrder";
+                        orderIDs = gOrders.stream()
+                                          .map(Order::getOrderID)
+                                          .collect(Collectors.toList());
+                        orderID = new Gson().toJson(orderIDs);
+                        break;
+                    case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                        @SuppressWarnings("unchecked")
+                        List<List<Order>> lgOrders = (List<List<Order>>) orders.get(positionNow).getOrder();
+                        action = "takeLongTermGroupOrder";
+                        orderIDs = lgOrders.stream()
+                                           .flatMap(List::stream)
+                                           .map(Order::getOrderID)
+                                           .collect(Collectors.toList());
+                        orderID = new Gson().toJson(orderIDs);
+
                 }
                 JsonObject jsonOut = new JsonObject();
                 jsonOut.addProperty("action", action);

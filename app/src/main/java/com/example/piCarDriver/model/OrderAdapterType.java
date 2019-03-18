@@ -3,6 +3,7 @@ package com.example.piCarDriver.model;
 public class OrderAdapterType {
     public final static int SINGLE_ORDER = 0;
     public final static int LONG_TERM_ORDER = 1;
+    public final static int GROUP_ORDER = 2;
     public final static int LONG_TERM_GROUP_ORDER = 3;
     private Object order;
     private int viewType;
