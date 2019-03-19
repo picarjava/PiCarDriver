@@ -14,7 +14,8 @@ import android.view.ViewGroup;
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.Order;
-import com.example.piCarDriver.orderAdapter.LongTermOrderAdapter;
+import com.example.piCarDriver.model.OrderAdapterType;
+import com.example.piCarDriver.orderAdapter.OrderAdapter;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -24,10 +25,10 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public class GroupOrderPageFragment extends Fragment {
     private final static String TAG = "LongTermOrderPageFragment";
-    private List<List<Order>> orders;
     private DriverCallBack driverCallBack;
 
     @Override
@@ -48,8 +49,11 @@ public class GroupOrderPageFragment extends Fragment {
             String jsonIn = new CommonTask().execute("/groupOrderApi", jsonObject.toString()).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
             Type type =  new TypeToken<List<List<Order>>>(){}.getType();
-            orders = gson.fromJson(jsonIn, type);
-            recyclerView.setAdapter(new LongTermOrderAdapter(orders, driverCallBack.driverCallBack()));
+            List<List<Order>> orders = gson.fromJson(jsonIn, type);
+            List<OrderAdapterType> orderAdapterTypes = orders.stream()
+                                                             .map(o -> new OrderAdapterType(o, OrderAdapterType.GROUP_ORDER))
+                                                             .collect(Collectors.toList());
+            recyclerView.setAdapter(new OrderAdapter(orderAdapterTypes, driverCallBack.driverCallBack()));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {
             e.printStackTrace();

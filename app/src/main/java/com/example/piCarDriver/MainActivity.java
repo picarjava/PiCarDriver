@@ -24,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.piCarDriver.model.OrderAdapterType;
 import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
 import com.example.piCarDriver.orderPageFragment.OrderPageFragment;
 import com.example.piCarDriver.task.CommonTask;
@@ -103,11 +104,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (id == R.id.nav_order) {
             orderPages = new ArrayList<>();
             OrderPageFragment orderPageFragment = new OrderPageFragment();
-            passJsonToFragment(orderPageFragment, "/singleOrderApi","getNewSingleOrder");
+            passArgumentToFragment(orderPageFragment, "/singleOrderApi","getNewSingleOrder", OrderAdapterType.SINGLE_ORDER);
             orderPages.add(new OrderPage(orderPageFragment, "單人訂單"));
-            LongTermOrderPageFragment longTermOrderPageFragment = new LongTermOrderPageFragment();
-            passJsonToFragment(longTermOrderPageFragment, "/singleOrderApi", "getLongTermSingleOrder");
-            orderPages.add(new OrderPage(longTermOrderPageFragment, "長期訂單"));
+            OrderPageFragment lOrderPageFragment = new OrderPageFragment();
+            passArgumentToFragment(lOrderPageFragment, "/singleOrderApi", "getLongTermSingleOrder", OrderAdapterType.LONG_TERM_ORDER);
+            orderPages.add(new OrderPage(lOrderPageFragment, "長期訂單"));
+            OrderPageFragment gOrderPageFragment = new OrderPageFragment();
+            passArgumentToFragment(gOrderPageFragment, "/groupOrderApi", "getGroupOrder", OrderAdapterType.GROUP_ORDER);
+            orderPages.add(new OrderPage(gOrderPageFragment, "揪團訂單"));
             setNavigationItemFragment("Order", new OrderFragment());
         } else if (id == R.id.nav_schedule) {
             orderPages = new ArrayList<>();
@@ -141,12 +145,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                .commit();
     }
 
-    private void passJsonToFragment(Fragment fragment, String url, String action) {
+    private void passArgumentToFragment(Fragment fragment, String url, String action, int orderAdapterType) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("action", action);
         Bundle bundle = new Bundle();
         bundle.putString("url", url);
         bundle.putString("action", jsonObject.toString());
+        bundle.putInt("orderAdapterType", orderAdapterType);
         fragment.setArguments(bundle);
     }
 

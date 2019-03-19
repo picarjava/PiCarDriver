@@ -11,17 +11,18 @@ import android.widget.TextView;
 
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.R;
+import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.model.LongTermOrder;
 import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.model.OrderAdapterType;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 
 public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -63,7 +64,7 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     class GroupOrderHolder extends OrderHolder {
         TextView people;
 
-        public GroupOrderHolder(@NonNull View view) {
+        private GroupOrderHolder(@NonNull View view) {
             super(view);
             this.people = view.findViewById(R.id.people);
         }
@@ -108,45 +109,50 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         OrderHolder orderHolder = (OrderHolder) viewHolder;
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm");
         int viewType = orders.get(position).getViewType();
-        Order order = null;
         int amount = 0;
-        int people;
+        String startLoc = null;
+        String endLoc = null;
+        Timestamp startTime = null;
         switch (viewType) {
             case OrderAdapterType.SINGLE_ORDER:
-                order = (Order) orders.get(position).getOrder();
+                Order order = (Order) orders.get(position).getOrder();
+                startLoc = order.getStartLoc();
+                endLoc = order.getEndLoc();
+                startTime = order.getStartTime();
                 amount = order.getTotalAmount();
                 break;
             case OrderAdapterType.LONG_TERM_ORDER:
+                @SuppressWarnings("unchecked")
+                LongTermOrder lOrder = (LongTermOrder) orders.get(position).getOrder();
+                startLoc = lOrder.getStartLoc();
+                endLoc = lOrder.getEndLoc();
+                startTime = lOrder.getStartTime();
+                amount = lOrder.getTotalAmount();
+                ((LongTermOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lOrder.getEndTime()));
+                break;
             case OrderAdapterType.GROUP_ORDER:
                 @SuppressWarnings("unchecked")
-                List<Order> lOrders = (List<Order>) orders.get(position).getOrder();
-                order = lOrders.get(0);
-                amount = lOrders.stream()
-                                .mapToInt(Order::getTotalAmount)
-                                .reduce((acc, totalAmount) -> acc + totalAmount)
-                                .orElse(0);
-                ((LongTermOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lOrders.get(lOrders.size() - 1).getStartTime()));
+                GroupOrder gOrder = (GroupOrder) orders.get(position).getOrder();
+                startLoc = gOrder.getStartLoc();
+                endLoc = gOrder.getEndLoc();
+                startTime = gOrder.getStartTime();
+                amount = gOrder.getTotalAmount();
+                ((GroupOrderHolder) orderHolder).people.setText(String.valueOf(gOrder.getPeople()));
                 break;
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                 @SuppressWarnings("unchecked")
-                List<List<Order>> lgOrders = (List<List<Order>>) orders.get(position).getOrder();
-                order = lgOrders.get(0).get(0);
-                amount = lgOrders.stream()
-                                 .flatMap(Collection::stream)
-                                 .mapToInt(Order::getTotalAmount)
-                                 .reduce((acc, c) -> acc + c)
-                                 .orElse(0);
-                people = lgOrders.get(0).size();
-                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lgOrders.get(lgOrders.size() - 1).get(0).getStartTime()));
-                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(people));
+                GroupOrder lgOrder = (GroupOrder) orders.get(position).getOrder();
+                startLoc = lgOrder.getStartLoc();
+                endLoc = lgOrder.getEndLoc();
+                startTime =lgOrder.getStartTime();
+                amount = lgOrder.getTotalAmount();
+                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(lgOrder.getPeople()));
+                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lgOrder.getStartTime()));
                 break;
         }
-
-        assert order != null;
-        orderHolder.startLoc.setText(order.getStartLoc());
-        orderHolder.endLoc.setText(order.getEndLoc());
-
-        orderHolder.startTime.setText(simpleDateFormat.format(order.getStartTime()));
+        orderHolder.startLoc.setText(startLoc);
+        orderHolder.endLoc.setText(endLoc);
+        orderHolder.startTime.setText(simpleDateFormat.format(startTime));
         orderHolder.amount.setText(String.valueOf(amount) + "元");
         orderHolder.btnAccept.setOnClickListener((View view) -> {
             try {
@@ -160,32 +166,24 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         break;
                     case OrderAdapterType.LONG_TERM_ORDER:
                         @SuppressWarnings("unchecked")
-                        List<Order> lOrders = (List<Order>) orders.get(positionNow).getOrder();
+                        LongTermOrder lOrders = (LongTermOrder) orders.get(positionNow).getOrder();
                         action = "takeLongTermOrder";
-                        List<String> orderIDs = lOrders.stream()
-                                                       .map(Order::getOrderID)
-                                                       .collect(Collectors.toList());
+                        List<String> orderIDs = lOrders.getOrderIDs();
                         orderID = new Gson().toJson(orderIDs);
                         break;
                     case OrderAdapterType.GROUP_ORDER:
                         @SuppressWarnings("unchecked")
-                        List<Order> gOrders = (List<Order>) orders.get(positionNow).getOrder();
+                        GroupOrder gOrders = (GroupOrder) orders.get(positionNow).getOrder();
                         action = "takeGroupOrder";
-                        orderIDs = gOrders.stream()
-                                          .map(Order::getOrderID)
-                                          .collect(Collectors.toList());
-                        orderID = new Gson().toJson(orderIDs);
+                        orderID = gOrders.getGroupID();
                         break;
                     case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                         @SuppressWarnings("unchecked")
-                        List<List<Order>> lgOrders = (List<List<Order>>) orders.get(positionNow).getOrder();
+                        GroupOrder lgOrders = (GroupOrder) orders.get(positionNow).getOrder();
                         action = "takeLongTermGroupOrder";
-                        orderIDs = lgOrders.stream()
-                                           .flatMap(List::stream)
-                                           .map(Order::getOrderID)
-                                           .collect(Collectors.toList());
-                        orderID = new Gson().toJson(orderIDs);
-
+                        orderID = lgOrders.getGroupID();
+                        orderID = new Gson().toJson(orderID);
+                        break;
                 }
                 JsonObject jsonOut = new JsonObject();
                 jsonOut.addProperty("action", action);

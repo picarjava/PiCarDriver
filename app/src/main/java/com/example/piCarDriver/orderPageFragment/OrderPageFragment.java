@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,8 @@ import android.view.ViewGroup;
 import com.example.piCarDriver.Driver;
 import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
+import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.model.LongTermOrder;
 import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.model.OrderAdapterType;
 import com.example.piCarDriver.orderAdapter.OrderAdapter;
@@ -29,7 +32,6 @@ import java.util.stream.Collectors;
 
 public class OrderPageFragment extends Fragment {
     private final static String TAG = "OrderPageFragment";
-    private List<Order> orders;
     private DriverCallBack driverCallBack;
 
     @Override
@@ -47,15 +49,38 @@ public class OrderPageFragment extends Fragment {
         assert getArguments() != null;
         String action = getArguments().getString("action");
         String url = getArguments().getString("url");
+        int orderAdapterType = getArguments().getInt("orderAdapterType");
         try {
             String jsonIn = new CommonTask().execute(url, action).get();
             Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
-            Type type =  new TypeToken<List<Order>>(){}.getType();
-            orders = gson.fromJson(jsonIn, type);
             Driver driver = driverCallBack.driverCallBack();
-            List<OrderAdapterType> orderAdapterTypes = orders.stream()
-                                                             .map(o -> new OrderAdapterType(o, OrderAdapterType.SINGLE_ORDER))
-                                                             .collect(Collectors.toList());
+            Type type;
+            List<OrderAdapterType> orderAdapterTypes = null;
+            switch (orderAdapterType) {
+                case OrderAdapterType.SINGLE_ORDER:
+                    type = new TypeToken<List<Order>>() {}.getType();
+                    List<Order> orders = gson.fromJson(jsonIn, type);
+                    orderAdapterTypes = orders.stream()
+                                              .map(o -> new OrderAdapterType(o, orderAdapterType))
+                                              .collect(Collectors.toList());
+                    break;
+                case OrderAdapterType.LONG_TERM_ORDER:
+                    type = new TypeToken<List<LongTermOrder>>(){}.getType();
+                    List<List<Order>> lOrders = gson.fromJson(jsonIn, type);
+                    orderAdapterTypes = lOrders.stream()
+                                               .map(o -> new OrderAdapterType(o, orderAdapterType))
+                                               .collect(Collectors.toList());
+                    break;
+                case OrderAdapterType.GROUP_ORDER:
+                    type = new TypeToken<List<GroupOrder>>(){}.getType();
+                    List<GroupOrder> gOrders = gson.fromJson(jsonIn, type);
+                    Log.d(TAG, gOrders.toString());
+                    orderAdapterTypes = gOrders.stream()
+                                               .map(o -> new OrderAdapterType(o, orderAdapterType))
+                                               .collect(Collectors.toList());
+                    break;
+            }
+
             recyclerView.setAdapter(new OrderAdapter(orderAdapterTypes, driver));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {
