@@ -2,8 +2,9 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
     android:layout_width="match_parent"
-    android:layout_height="192dp"
+    android:layout_height="144dp"
     android:orientation="vertical">
 
     <TextView
@@ -31,9 +32,11 @@
         android:id="@+id/startTime"
         android:layout_width="0dp"
         android:layout_height="48dp"
+        app:layout_constraintHorizontal_weight="0.5"
         android:gravity="center"
         android:text="上車時間"
         app:layout_constraintEnd_toStartOf="@+id/endTime"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/endLoc" />
 
@@ -41,22 +44,37 @@
         android:id="@+id/endTime"
         android:layout_width="0dp"
         android:layout_height="48dp"
+        app:layout_constraintHorizontal_weight="0.5"
         android:gravity="center"
         android:text="下車時間"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/time"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/startTime"
         app:layout_constraintTop_toTopOf="@+id/startTime" />
+
+    <TextView
+        android:id="@+id/time"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:gravity="center"
+        app:layout_constraintHorizontal_weight="0.5"
+        android:text="時分"
+        app:layout_constraintEnd_toStartOf="@+id/people"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/endTime"
+        app:layout_constraintTop_toTopOf="@+id/endTime" />
 
     <TextView
         android:id="@+id/people"
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:gravity="center"
+        app:layout_constraintHorizontal_weight="0.5"
         android:text="人數"
         app:layout_constraintEnd_toStartOf="@+id/amount"
         app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/startTime" />
+        app:layout_constraintStart_toEndOf="@+id/time"
+        app:layout_constraintTop_toTopOf="@+id/time" />
 
     <TextView
         android:id="@+id/amount"
@@ -64,6 +82,7 @@
         android:layout_height="48dp"
         android:layout_weight="1"
         android:gravity="center"
+        app:layout_constraintHorizontal_weight="1"
         android:text="金額"
         app:layout_constraintEnd_toStartOf="@+id/acceptOrder"
         app:layout_constraintHorizontal_bias="0.5"
@@ -74,8 +93,10 @@
         android:id="@+id/acceptOrder"
         android:layout_width="0dp"
         android:layout_height="48dp"
+        app:layout_constraintHorizontal_weight="1"
         android:text="接受"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/amount"
         app:layout_constraintTop_toTopOf="@+id/amount" />
 </android.support.constraint.ConstraintLayout>

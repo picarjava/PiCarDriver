@@ -25,8 +25,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.piCarDriver.model.OrderAdapterType;
-import com.example.piCarDriver.orderPageFragment.LongTermOrderPageFragment;
+import com.example.piCarDriver.orderAdapter.OrderAdapter;
 import com.example.piCarDriver.orderPageFragment.OrderPageFragment;
+import com.example.piCarDriver.orderPageFragment.ScheduleOrderFragment;
 import com.example.piCarDriver.task.CommonTask;
 import com.example.piCarDriver.task.ImageTask;
 import com.google.gson.Gson;
@@ -41,7 +42,8 @@ import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener,
                                                                DriverCallBack,
-                                                               OrderFragment.OrderPagesCallBack {
+                                                               OrderFragment.OrderPagesCallBack,
+                                                               OrderAdapter.ExecuteSchedule {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
@@ -102,22 +104,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         if (id == R.id.nav_order) {
-            orderPages = new ArrayList<>();
-            OrderPageFragment orderPageFragment = new OrderPageFragment();
-            passArgumentToFragment(orderPageFragment, "/singleOrderApi","getNewSingleOrder", OrderAdapterType.SINGLE_ORDER);
-            orderPages.add(new OrderPage(orderPageFragment, "單人訂單"));
-            OrderPageFragment lOrderPageFragment = new OrderPageFragment();
-            passArgumentToFragment(lOrderPageFragment, "/singleOrderApi", "getLongTermSingleOrder", OrderAdapterType.LONG_TERM_ORDER);
-            orderPages.add(new OrderPage(lOrderPageFragment, "長期訂單"));
-            OrderPageFragment gOrderPageFragment = new OrderPageFragment();
-            passArgumentToFragment(gOrderPageFragment, "/groupOrderApi", "getGroupOrder", OrderAdapterType.GROUP_ORDER);
-            orderPages.add(new OrderPage(gOrderPageFragment, "揪團訂單"));
-            setNavigationItemFragment("Order", new OrderFragment());
+            orderPages = new OrderPagesBuilder().addFragment("/singleOrderApi","getNewSingleOrder", OrderAdapterType.SINGLE_ORDER, "單人訂單")
+                                                .addFragment("/singleOrderApi", "getLongTermSingleOrder", OrderAdapterType.LONG_TERM_ORDER, "長期訂單")
+                                                .addFragment("/groupOrderApi", "getGroupOrder", OrderAdapterType.GROUP_ORDER, "揪團訂單")
+                                                .addFragment("/groupOrderApi", "getLongTermGroupOrder", OrderAdapterType.LONG_TERM_GROUP_ORDER, "長期揪團訂單")
+                                                .build();
+            setNavigationItemFragment("SingleOrder", new OrderFragment());
         } else if (id == R.id.nav_schedule) {
-            orderPages = new ArrayList<>();
-            orderPages.add(new OrderPage(new OrderPageFragment(), "單人訂單"));
-            orderPages.add(new OrderPage(new LongTermOrderPageFragment(), "長期訂單"));
-            setNavigationItemFragment("Schedule", new OrderFragment());
+            setNavigationItemFragment("Schedule", new ScheduleOrderFragment());
         } else if (id == R.id.nav_favor_setting) {
             setNavigationItemFragment("Preference", new PreferenceFragment());
         } else if (id == R.id.nav_logout) {
@@ -145,14 +139,38 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                .commit();
     }
 
-    private void passArgumentToFragment(Fragment fragment, String url, String action, int orderAdapterType) {
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("action", action);
-        Bundle bundle = new Bundle();
-        bundle.putString("url", url);
-        bundle.putString("action", jsonObject.toString());
-        bundle.putInt("orderAdapterType", orderAdapterType);
-        fragment.setArguments(bundle);
+    @Override
+    public void executeSchedule(OrderAdapterType orderAdapterType) {
+        getSupportFragmentManager().popBackStack();
+        MapFragment mapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("Map");
+        if (mapFragment != null) {
+            mapFragment.drawDirectionCallBack(orderAdapterType);
+        }
+    }
+
+    private class OrderPagesBuilder {
+        private List<OrderPage> orderPages;
+
+        private OrderPagesBuilder() {
+            orderPages = new ArrayList<>();
+        }
+
+        private OrderPagesBuilder addFragment(String url, String action, int orderAdapterType, String title) {
+            OrderPageFragment orderPageFragment = new OrderPageFragment();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("action", action);
+            Bundle bundle = new Bundle();
+            bundle.putString("url", url);
+            bundle.putString("action", jsonObject.toString());
+            bundle.putInt("orderAdapterType", orderAdapterType);
+            orderPageFragment.setArguments(bundle);
+            orderPages.add(new OrderPage(orderPageFragment, title));
+            return this;
+        }
+
+        private List<OrderPage> build() {
+            return orderPages;
+        }
     }
 
     @Override

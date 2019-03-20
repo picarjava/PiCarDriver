@@ -1,6 +1,9 @@
 package com.example.piCarDriver.orderAdapter;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,11 +18,12 @@ import com.example.piCarDriver.model.GroupOrder;
 import com.example.piCarDriver.model.LongTermOrder;
 import com.example.piCarDriver.model.Order;
 import com.example.piCarDriver.model.OrderAdapterType;
+import com.example.piCarDriver.model.SingleOrder;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -29,24 +33,39 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     private final static String TAG = "OrderAdapter";
     private List<OrderAdapterType> orders;
     private Driver driver;
+    private ExecuteSchedule activity;
+
+    public interface ExecuteSchedule {
+        void executeSchedule(OrderAdapterType orderAdapterType);
+    }
 
     public OrderAdapter(List<OrderAdapterType> orders, Driver driver) {
         this.orders = orders;
         this.driver = driver;
     }
 
+    public OrderAdapter(List<OrderAdapterType> orders, Driver driver, ExecuteSchedule activity) {
+        this.orders = orders;
+        this.driver = driver;
+        this.activity = activity;
+    }
+
     class OrderHolder extends RecyclerView.ViewHolder {
+        ConstraintLayout container;
         TextView startLoc;
         TextView endLoc;
         TextView startTime;
+        TextView time;
         TextView amount;
         Button btnAccept;
 
         private OrderHolder(@NonNull View view) {
             super(view);
+            container = view.findViewById(R.id.container);
             startLoc = view.findViewById(R.id.startLoc);
             endLoc = view.findViewById(R.id.endLoc);
             startTime = view.findViewById(R.id.startTime);
+            time = view.findViewById(R.id.time);
             amount = view.findViewById(R.id.amount);
             btnAccept = view.findViewById(R.id.acceptOrder);
         }
@@ -73,7 +92,7 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     class LongTermGroupOrderHolder extends GroupOrderHolder {
         TextView endTime;
 
-        public LongTermGroupOrderHolder(@NonNull View view) {
+        private LongTermGroupOrderHolder(@NonNull View view) {
             super(view);
             this.endTime = view.findViewById(R.id.endTime);
         }
@@ -97,9 +116,10 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                                      .inflate(R.layout.view_group_order, viewGroup, false);
                 return new GroupOrderHolder(view);
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                Log.d(TAG, "lgOrder");
                 view = LayoutInflater.from(viewGroup.getContext())
                                      .inflate(R.layout.view_longterm_group_order, viewGroup, false);
-                return new LongTermOrderHolder(view);
+                return new LongTermGroupOrderHolder(view);
         }
         return null;
     }
@@ -107,98 +127,72 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder viewHolder, int position) {
         OrderHolder orderHolder = (OrderHolder) viewHolder;
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd HH:mm");
+        DateFormat dateFormat = new SimpleDateFormat("MM/dd");
+        DateFormat timeFormat = new SimpleDateFormat("HH:mm");
         int viewType = orders.get(position).getViewType();
-        int amount = 0;
-        String startLoc = null;
-        String endLoc = null;
-        Timestamp startTime = null;
+        Order order = orders.get(position).getOrder();
         switch (viewType) {
-            case OrderAdapterType.SINGLE_ORDER:
-                Order order = (Order) orders.get(position).getOrder();
-                startLoc = order.getStartLoc();
-                endLoc = order.getEndLoc();
-                startTime = order.getStartTime();
-                amount = order.getTotalAmount();
-                break;
             case OrderAdapterType.LONG_TERM_ORDER:
-                @SuppressWarnings("unchecked")
-                LongTermOrder lOrder = (LongTermOrder) orders.get(position).getOrder();
-                startLoc = lOrder.getStartLoc();
-                endLoc = lOrder.getEndLoc();
-                startTime = lOrder.getStartTime();
-                amount = lOrder.getTotalAmount();
-                ((LongTermOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lOrder.getEndTime()));
+                ((LongTermOrderHolder) orderHolder).endTime.setText(dateFormat.format(order.getEndTime()));
                 break;
             case OrderAdapterType.GROUP_ORDER:
-                @SuppressWarnings("unchecked")
-                GroupOrder gOrder = (GroupOrder) orders.get(position).getOrder();
-                startLoc = gOrder.getStartLoc();
-                endLoc = gOrder.getEndLoc();
-                startTime = gOrder.getStartTime();
-                amount = gOrder.getTotalAmount();
-                ((GroupOrderHolder) orderHolder).people.setText(String.valueOf(gOrder.getPeople()));
+                ((GroupOrderHolder) orderHolder).people.setText(String.valueOf(((GroupOrder) order).getPeople()));
                 break;
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                @SuppressWarnings("unchecked")
-                GroupOrder lgOrder = (GroupOrder) orders.get(position).getOrder();
-                startLoc = lgOrder.getStartLoc();
-                endLoc = lgOrder.getEndLoc();
-                startTime =lgOrder.getStartTime();
-                amount = lgOrder.getTotalAmount();
-                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(lgOrder.getPeople()));
-                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(simpleDateFormat.format(lgOrder.getStartTime()));
+                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(((GroupOrder) order).getPeople()) + "人");
+                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(dateFormat.format(order.getEndTime()));
                 break;
         }
-        orderHolder.startLoc.setText(startLoc);
-        orderHolder.endLoc.setText(endLoc);
-        orderHolder.startTime.setText(simpleDateFormat.format(startTime));
-        orderHolder.amount.setText(String.valueOf(amount) + "元");
-        orderHolder.btnAccept.setOnClickListener((View view) -> {
-            try {
-                int positionNow = orderHolder.getAdapterPosition();
-                String action = null;
-                String orderID = null;
-                switch (viewType) {
-                    case OrderAdapterType.SINGLE_ORDER:
-                        action = "takeSingleOrder";
-                        orderID = ((Order) orders.get(positionNow).getOrder()).getOrderID();
-                        break;
-                    case OrderAdapterType.LONG_TERM_ORDER:
-                        @SuppressWarnings("unchecked")
-                        LongTermOrder lOrders = (LongTermOrder) orders.get(positionNow).getOrder();
-                        action = "takeLongTermOrder";
-                        List<String> orderIDs = lOrders.getOrderIDs();
-                        orderID = new Gson().toJson(orderIDs);
-                        break;
-                    case OrderAdapterType.GROUP_ORDER:
-                        @SuppressWarnings("unchecked")
-                        GroupOrder gOrders = (GroupOrder) orders.get(positionNow).getOrder();
-                        action = "takeGroupOrder";
-                        orderID = gOrders.getGroupID();
-                        break;
-                    case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                        @SuppressWarnings("unchecked")
-                        GroupOrder lgOrders = (GroupOrder) orders.get(positionNow).getOrder();
-                        action = "takeLongTermGroupOrder";
-                        orderID = lgOrders.getGroupID();
-                        orderID = new Gson().toJson(orderID);
-                        break;
+        orderHolder.startLoc.setText(order.getStartLoc());
+        orderHolder.endLoc.setText(order.getEndLoc());
+        orderHolder.startTime.setText(dateFormat.format(order.getStartTime()));
+        Log.d(TAG, order.getStartTime().toString());
+        orderHolder.time.setText(timeFormat.format(order.getStartTime()));
+        orderHolder.amount.setText(String.valueOf(order.getTotalAmount()) + "元");
+        if (activity == null) {
+            orderHolder.btnAccept.setOnClickListener((View view) -> {
+                try {
+                    view.getContext();
+                    int positionNow = orderHolder.getAdapterPosition();
+                    String url = null;
+                    String action = null;
+                    JsonObject jsonOut = new JsonObject();
+                    Order orderNow = orders.get(positionNow).getOrder();
+                    switch (viewType) {
+                        case OrderAdapterType.SINGLE_ORDER:
+                            url = "/singleOrderApi";
+                            action = "takeSingleOrder";
+                            jsonOut.addProperty("orderID", ((SingleOrder) orderNow).getOrderID());
+                            break;
+                        case OrderAdapterType.LONG_TERM_ORDER:
+                            url = "/singleOrderApi";
+                            action = "takeLongTermOrder";
+                            jsonOut.addProperty("orderID", new Gson().toJson(((LongTermOrder) orderNow).getOrderIDs()));
+                            break;
+                        case OrderAdapterType.GROUP_ORDER:
+                        case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                            action = "takeGroupOrder";
+                            url = "/groupOrderApi";
+                            jsonOut.addProperty("groupID", ((GroupOrder) orderNow).getGroupID());
+                            break;
+                    }
+
+                    jsonOut.addProperty("action", action);
+                    jsonOut.addProperty("driverID", driver.getDriverID());
+                    new CommonTask().execute(url, jsonOut.toString()).get();
+                    Log.d(TAG, jsonOut.toString());
+                    orders.remove(positionNow);
+                    notifyItemRemoved(positionNow);
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                JsonObject jsonOut = new JsonObject();
-                jsonOut.addProperty("action", action);
-                jsonOut.addProperty("driverID", driver.getDriverID());
-                jsonOut.addProperty("orderID", orderID);
-                new CommonTask().execute("/singleOrderApi", jsonOut.toString()).get();
-                Log.d(TAG, jsonOut.toString());
-                orders.remove(positionNow);
-                notifyItemRemoved(positionNow);
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+            });
+        } else {
+            orderHolder.btnAccept.setVisibility(View.GONE);
+            orderHolder.container.setOnClickListener(v -> showDownloadDialog(v.getContext(), orders.get(orderHolder.getAdapterPosition())));
+        }
     }
 
     @Override
@@ -209,5 +203,16 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public int getItemCount() {
         return orders.size();
+    }
+
+    private void showDownloadDialog(Context context, OrderAdapterType orderAdapterType) {
+        new AlertDialog.Builder(context)
+                .setTitle("找不到掃描器")
+                .setMessage("請至Google play商店下載")
+                .setPositiveButton("Yes", (d, i)->{
+                    activity.executeSchedule(orderAdapterType);
+                    d.dismiss();
+                }).setNegativeButton("no", (d, i)-> d.cancel())
+                .show();
     }
 }

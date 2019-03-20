@@ -5,6 +5,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.example.piCarDriver.model.Order;
+import com.example.piCarDriver.model.OrderAdapterType;
 
 public class WebSocketHandler extends Handler {
     private final static String TAG = "WebSocketHandler";
@@ -12,7 +13,7 @@ public class WebSocketHandler extends Handler {
     final static int GET_IN_SUCCEED = 1;
 
     public interface WebSocketCallBack {
-        void drawDirectionCallBack(Order order);
+        void drawDirectionCallBack(OrderAdapterType orderAdapterType);
         void getInSuccessCallBack();
     }
 
@@ -27,7 +28,7 @@ public class WebSocketHandler extends Handler {
         Log.d(TAG, "handleMessage");
         switch (message.what) {
             case SINGLE_ORDER_RECEIVED:
-                webSocketCallBack.drawDirectionCallBack((Order) message.obj);
+                webSocketCallBack.drawDirectionCallBack(new OrderAdapterType((Order) message.obj, OrderAdapterType.SINGLE_ORDER));
                 break;
             case GET_IN_SUCCEED:
                 webSocketCallBack.getInSuccessCallBack();

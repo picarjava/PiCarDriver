@@ -5,19 +5,19 @@ public class OrderAdapterType {
     public final static int LONG_TERM_ORDER = 1;
     public final static int GROUP_ORDER = 2;
     public final static int LONG_TERM_GROUP_ORDER = 3;
-    private Object order;
+    private Order order;
     private int viewType;
 
-    public OrderAdapterType(Object object, int viewType) {
-        order = object;
+    public OrderAdapterType(Order order, int viewType) {
+        this.order = order;
         this.viewType = viewType;
     }
 
-    public Object getOrder() {
+    public Order getOrder() {
         return order;
     }
 
-    public void setOrder(Object order) {
+    public void setOrder(Order order) {
         this.order = order;
     }
 

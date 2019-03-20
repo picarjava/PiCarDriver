@@ -17,7 +17,7 @@ import com.example.piCarDriver.DriverCallBack;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.GroupOrder;
 import com.example.piCarDriver.model.LongTermOrder;
-import com.example.piCarDriver.model.Order;
+import com.example.piCarDriver.model.SingleOrder;
 import com.example.piCarDriver.model.OrderAdapterType;
 import com.example.piCarDriver.orderAdapter.OrderAdapter;
 import com.example.piCarDriver.task.CommonTask;
@@ -58,20 +58,21 @@ public class OrderPageFragment extends Fragment {
             List<OrderAdapterType> orderAdapterTypes = null;
             switch (orderAdapterType) {
                 case OrderAdapterType.SINGLE_ORDER:
-                    type = new TypeToken<List<Order>>() {}.getType();
-                    List<Order> orders = gson.fromJson(jsonIn, type);
-                    orderAdapterTypes = orders.stream()
+                    type = new TypeToken<List<SingleOrder>>() {}.getType();
+                    List<SingleOrder> singleOrders = gson.fromJson(jsonIn, type);
+                    orderAdapterTypes = singleOrders.stream()
                                               .map(o -> new OrderAdapterType(o, orderAdapterType))
                                               .collect(Collectors.toList());
                     break;
                 case OrderAdapterType.LONG_TERM_ORDER:
                     type = new TypeToken<List<LongTermOrder>>(){}.getType();
-                    List<List<Order>> lOrders = gson.fromJson(jsonIn, type);
+                    List<LongTermOrder> lOrders = gson.fromJson(jsonIn, type);
                     orderAdapterTypes = lOrders.stream()
                                                .map(o -> new OrderAdapterType(o, orderAdapterType))
                                                .collect(Collectors.toList());
                     break;
                 case OrderAdapterType.GROUP_ORDER:
+                case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                     type = new TypeToken<List<GroupOrder>>(){}.getType();
                     List<GroupOrder> gOrders = gson.fromJson(jsonIn, type);
                     Log.d(TAG, gOrders.toString());

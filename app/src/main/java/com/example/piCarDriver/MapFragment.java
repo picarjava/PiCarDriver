@@ -23,7 +23,11 @@ import android.widget.Toast;
 
 import com.example.piCarDriver.bottomSheet.GetInBottomSheetFragment;
 import com.example.piCarDriver.bottomSheet.GetOffBottomSheetFragment;
+import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.model.LongTermOrder;
 import com.example.piCarDriver.model.Order;
+import com.example.piCarDriver.model.OrderAdapterType;
+import com.example.piCarDriver.model.SingleOrder;
 import com.example.piCarDriver.webSocket.LocationWebSocket;
 import com.example.piCarDriver.webSocket.WebSocketHandler;
 import com.google.android.gms.common.api.ApiException;
@@ -74,7 +78,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private Button online;
     private LocationWebSocket locationWebSocket;
     private Driver driver;
-    private Order order;
+    private OrderAdapterType orderAdapterType;
     private DirectionTask directionTask;
     private AnimateTask animateTask;
     private ArriveLocTask arriveLocTask;
@@ -220,13 +224,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     }
 
     @Override
-    public void drawDirectionCallBack(Order order) {
+    public void drawDirectionCallBack(OrderAdapterType orderAdapterType) {
+        this.orderAdapterType = orderAdapterType;
+        Order order = orderAdapterType.getOrder();
+        Log.d(TAG, order.getStartLat() + " " + order.getStartLng());
         stopLocationUpdates();
-        locationWebSocket.close();
+        if (locationWebSocket != null)
+            locationWebSocket.close();
         online.setVisibility(View.INVISIBLE);
         online.setText("上線");
         isOnline = false;
-        this.order = order;
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
                                           new LatLng(order.getStartLat(), order.getStartLng()));
         directionTask.execute(getString(R.string.direction_key));
@@ -239,6 +246,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     @Override
     public void getInSuccessCallBack() {
+        Order order = orderAdapterType.getOrder();
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
                                           new LatLng(order.getEndLat(), order.getEndLng()));
         directionTask.execute(getString(R.string.direction_key));
@@ -386,16 +394,40 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected void onPostExecute(Void aVoid) {
             Log.d(TAG, "arrive");
             Bundle bundle = new Bundle();
-            Order order = mapFragment.order;
+            Order order = mapFragment.orderAdapterType.getOrder();
+            int viewType = mapFragment.orderAdapterType.getViewType();
+            bundle.putInt("viewType", viewType);
             bundle.putString("driverID", order.getDriverID());
-            bundle.putString("orderID", order.getOrderID());
+            switch (viewType) {
+                case OrderAdapterType.SINGLE_ORDER:
+                    bundle.putString("orderID", ((SingleOrder) order).getOrderID());
+                    break;
+                case OrderAdapterType.LONG_TERM_ORDER:
+                    bundle.putString("orderID", ((LongTermOrder) order).getOrderIDs().get(0));
+                    break;
+                case OrderAdapterType.GROUP_ORDER:
+                case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                    bundle.putString("groupID", ((GroupOrder) order).getGroupID());
+                    break;
+            }
             String tag;
             if (!isEnd) {
                 mapFragment.bottomSheetDialogFragment = new GetInBottomSheetFragment();
                 tag = "getIn";
-            } else {
+            } else if (viewType == OrderAdapterType.SINGLE_ORDER || viewType == OrderAdapterType.LONG_TERM_ORDER) {
+                if (viewType == OrderAdapterType.SINGLE_ORDER) {
+                    SingleOrder singleOrder = (SingleOrder) order;
+                    if (singleOrder.getOrderType() > 1) {
+                        mapFragment.getNewLocationWebSocket();
+                        return;
+                    }
+                }
+
                 mapFragment.bottomSheetDialogFragment = new GetOffBottomSheetFragment();
                 tag = "getOff";
+            } else {
+                mapFragment.getNewLocationWebSocket();
+                return;
             }
 
             mapFragment.bottomSheetDialogFragment.setArguments(bundle);

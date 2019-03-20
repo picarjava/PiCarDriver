@@ -1,38 +1,21 @@
 package com.example.piCarDriver.model;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import java.sql.Timestamp;
 
-public class Order implements Parcelable {
-    private String orderID;
-    private String driverID;
-    private String memId;
-    private Integer state;
-    private Integer totalAmount;
-    private String startLoc;
-    private String endLoc;
-    private Timestamp startTime;
-    private Timestamp endTime;
-    private Double startLng;
-    private Double startLat;
-    private Double endLng;
-    private Double endLat;
-    private Integer orderType;
-    private Integer rate;
-    private String note;
-    private Timestamp launchTime;
-
-    public Order() {}
-
-    public String getOrderID() {
-        return orderID;
-    }
-
-    public void setOrderID(String orderID) {
-        this.orderID = orderID;
-    }
+public class Order {
+    protected String driverID;
+    protected String memId;
+    protected Integer state;
+    protected Integer totalAmount;
+    protected String startLoc;
+    protected String endLoc;
+    protected Timestamp startTime;
+    protected Timestamp endTime;
+    protected Double startLng;
+    protected Double startLat;
+    protected Double endLng;
+    protected Double endLat;
+    protected String note;
 
     public String getDriverID() {
         return driverID;
@@ -42,12 +25,12 @@ public class Order implements Parcelable {
         this.driverID = driverID;
     }
 
-    public String getMemID() {
+    public String getMemId() {
         return memId;
     }
 
-    public void setMemID(String memID) {
-        this.memId = memID;
+    public void setMemId(String memId) {
+        this.memId = memId;
     }
 
     public Integer getState() {
@@ -130,22 +113,6 @@ public class Order implements Parcelable {
         this.endLat = endLat;
     }
 
-    public Integer getOrderType() {
-        return orderType;
-    }
-
-    public void setOrderType(Integer orderType) {
-        this.orderType = orderType;
-    }
-
-    public Integer getRate() {
-        return rate;
-    }
-
-    public void setRate(Integer rate) {
-        this.rate = rate;
-    }
-
     public String getNote() {
         return note;
     }
@@ -153,79 +120,4 @@ public class Order implements Parcelable {
     public void setNote(String note) {
         this.note = note;
     }
-
-    public Timestamp getLaunchTime() {
-        return launchTime;
-    }
-
-    public void setLaunchTime(Timestamp lauchTime) {
-        this.launchTime = lauchTime;
-    }
-
-    @Override
-    public String toString() {
-        return "SingleOrderVO [orderId=" + orderID + ", driverId=" + driverID + ", state=" + state + ", totalAmount="
-                + totalAmount + ", startLoc=" + startLoc + ", endLoc=" + endLoc + ", startTime=" + startTime
-                + ", endTime=" + endTime + ", startLng=" + startLng + ", startLat=" + startLat + ", endLng=" + endLng
-                + ", endLat=" + endLat + ", orderType=" + orderType + ", rate=" + rate + ", note=" + note
-                + ", lauchTime=" + launchTime + "]";
-    }
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(this.orderID);
-        dest.writeString(this.driverID);
-        dest.writeString(this.memId);
-        dest.writeInt(this.state);
-        dest.writeInt(this.totalAmount);
-        dest.writeString(this.startLoc);
-        dest.writeString(this.endLoc);
-        dest.writeLong(this.startTime.getTime());
-        dest.writeLong(this.endTime.getTime());
-        dest.writeDouble(this.startLng);
-        dest.writeDouble(this.startLat);
-        dest.writeDouble(this.endLng);
-        dest.writeDouble(this.endLat);
-        dest.writeInt(this.orderType);
-        dest.writeInt(this.rate);
-        dest.writeString(this.note);
-        dest.writeLong(this.launchTime.getTime());
-    }
-
-    protected Order(Parcel in) {
-        this.orderID = in.readString();
-        this.driverID = in.readString();
-        this.memId = in.readString();
-        this.state = in.readInt();
-        this.totalAmount = in.readInt();
-        this.startLoc = in.readString();
-        this.endLoc = in.readString();
-        this.startTime = new Timestamp(in.readLong());
-        this.endTime = new Timestamp(in.readLong());
-        this.startLng = in.readDouble();
-        this.startLat = in.readDouble();
-        this.endLng = in.readDouble();
-        this.endLat = in.readDouble();
-        this.orderType = in.readInt();
-        this.rate = in.readInt();
-        this.note = in.readString();
-        this.launchTime = new Timestamp(in.readLong());
-    }
-
-    public static final Parcelable.Creator<Order> CREATOR = new Parcelable.Creator<Order>() {
-        @Override
-        public Order createFromParcel(Parcel source) {
-            return new Order(source);
-        }
-
-        @Override
-        public Order[] newArray(int size) {
-            return new Order[size];
-        }
-    };
 }

@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import com.example.piCarDriver.model.Order;
+import com.example.piCarDriver.model.SingleOrder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -35,7 +36,7 @@ public class LocationWebSocket extends WebSocketClient {
         String singleOrder = "singleOrder";
         String state = "state";
         if (jsonObject.has(singleOrder)) {
-            Order vo = gson.fromJson(jsonObject.get(singleOrder).getAsString(), Order.class);
+            Order vo = gson.fromJson(jsonObject.get(singleOrder).getAsString(), SingleOrder.class);
             handler.obtainMessage(WebSocketHandler.SINGLE_ORDER_RECEIVED, vo).sendToTarget();
         } else if (jsonObject.has(state)) {
             if ("OK".equals(jsonObject.get(state).getAsString()))

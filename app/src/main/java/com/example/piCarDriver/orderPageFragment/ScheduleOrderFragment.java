@@ -12,9 +12,13 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.piCarDriver.Driver;
-import com.example.piCarDriver.DriverCallBack;
+import com.example.piCarDriver.MainActivity;
 import com.example.piCarDriver.R;
-import com.example.piCarDriver.model.Order;
+import com.example.piCarDriver.model.GroupOrder;
+import com.example.piCarDriver.model.LongTermOrder;
+import com.example.piCarDriver.model.OrderAdapterType;
+import com.example.piCarDriver.model.SingleOrder;
+import com.example.piCarDriver.orderAdapter.OrderAdapter;
 import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,34 +26,34 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class ScheduleOrderFragment extends Fragment {
-    private DriverCallBack activity;
-    private List<Order> orders;
+    private final static String TAG = "ScheduleOrderFragment";
+    private MainActivity activity;
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        activity = (DriverCallBack) context;
+        activity = (MainActivity) context;
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
-        View view = inflater.inflate(R.layout.fragment_order_page, container, false);
+        View view = inflater.inflate(R.layout.fragment_schedule_order, container, false);
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
+        Driver driver = activity.driverCallBack();
         try {
             JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("action", "getNewSingleOrder");
-            String jsonIn = new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get();
-            Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
-            Type type =  new TypeToken<List<Order>>(){}.getType();
-            orders = gson.fromJson(jsonIn, type);
-            Driver driver = activity.driverCallBack();
-//            recyclerView.setAdapter(new OrderAdapter(orders, driver));
+            jsonObject.addProperty("action", "getScheduledOrder");
+            jsonObject.addProperty("driverID", driver.getDriverID());
+            List<OrderAdapterType> orderAdapterTypes = getSingleOrder(new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get());
+            orderAdapterTypes.addAll(getGroupOrder(new CommonTask().execute("/groupOrderApi", jsonObject.toString()).get()));
+            recyclerView.setAdapter(new OrderAdapter(orderAdapterTypes, driver, activity));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {
             e.printStackTrace();
@@ -58,5 +62,47 @@ public class ScheduleOrderFragment extends Fragment {
         }
 
         return view;
+    }
+
+    private List<OrderAdapterType> getSingleOrder(String jsonIn) {
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
+        JsonObject jsonObjIn = gson.fromJson(jsonIn, JsonObject.class);
+        List<OrderAdapterType> orderAdapterTypes = new ArrayList<>();
+        Type type =  new TypeToken<List<SingleOrder>>(){}.getType();
+        List<SingleOrder> singleOrders = gson.fromJson(jsonObjIn.get("singleOrder").getAsString(), type);
+        if (singleOrders != null)
+            singleOrders.stream()
+                    .map(o -> new OrderAdapterType(o, OrderAdapterType.SINGLE_ORDER))
+                    .forEach(orderAdapterTypes::add);
+
+        type = new TypeToken<List<LongTermOrder>>(){}.getType();
+        List<LongTermOrder> longTermOrders = gson.fromJson(jsonObjIn.get("longTermOrder").getAsString(), type);
+        if (longTermOrders != null)
+            longTermOrders.stream()
+                    .map(o -> new OrderAdapterType(o, OrderAdapterType.LONG_TERM_ORDER))
+                    .forEach(orderAdapterTypes::add);
+
+        return orderAdapterTypes;
+    }
+
+    private List<OrderAdapterType> getGroupOrder(String jsonIn) {
+        Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
+        JsonObject jsonObjIn = gson.fromJson(jsonIn, JsonObject.class);
+        List<OrderAdapterType> orderAdapterTypes = new ArrayList<>();
+        Type type =  new TypeToken<List<GroupOrder>>(){}.getType();
+        List<GroupOrder> groupOrders = gson.fromJson(jsonObjIn.get("groupOrder").getAsString(), type);
+        if (groupOrders != null)
+            groupOrders.stream()
+                       .map(o -> new OrderAdapterType(o, OrderAdapterType.GROUP_ORDER))
+                       .forEach(orderAdapterTypes::add);
+
+        type = new TypeToken<List<GroupOrder>>(){}.getType();
+        List<GroupOrder> longTermGroupOrders = gson.fromJson(jsonObjIn.get("longTermGroupOrder").getAsString(), type);
+        if (longTermGroupOrders != null)
+            longTermGroupOrders.stream()
+                               .map(o -> new OrderAdapterType(o, OrderAdapterType.LONG_TERM_GROUP_ORDER))
+                               .forEach(orderAdapterTypes::add);
+
+        return orderAdapterTypes;
     }
 }

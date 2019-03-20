@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import com.example.piCarDriver.Contents;
 import com.example.piCarDriver.QRCodeEncoder;
 import com.example.piCarDriver.R;
+import com.example.piCarDriver.model.OrderAdapterType;
 import com.google.gson.JsonObject;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
@@ -25,11 +26,18 @@ public class GetInBottomSheetFragment extends BottomSheetDialogFragment {
         ImageView qrCode = view.findViewById(R.id.imageView);
         Bundle bundle = getArguments();
         assert bundle != null;
-        String driverID = bundle.getString("driverID");
-        String orderID = bundle.getString("orderID");
         JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("driverID", driverID);
-        jsonObject.addProperty("orderID", orderID);
+        jsonObject.addProperty("driverID", bundle.getString("driverID"));
+        switch (bundle.getInt("viewType")) {
+            case OrderAdapterType.SINGLE_ORDER:
+            case OrderAdapterType.LONG_TERM_ORDER:
+                jsonObject.addProperty("orderID", bundle.getString("orderID"));
+                break;
+            case OrderAdapterType.GROUP_ORDER:
+            case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                jsonObject.addProperty("groupID", bundle.getString("groupID"));
+                break;
+        }
         try {
             Bitmap qrCodeImage = new QRCodeEncoder(jsonObject.toString(), null,
                                             Contents.Type.TEXT, BarcodeFormat.QR_CODE.toString(), 1500).encodeAsBitmap();
