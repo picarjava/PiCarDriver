@@ -394,6 +394,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected void onPostExecute(Void aVoid) {
             Log.d(TAG, "arrive");
             Bundle bundle = new Bundle();
+            BottomSheetDialogFragment bottomSheetDialogFragment;
             Order order = mapFragment.orderAdapterType.getOrder();
             int viewType = mapFragment.orderAdapterType.getViewType();
             bundle.putInt("viewType", viewType);
@@ -405,14 +406,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 case OrderAdapterType.LONG_TERM_ORDER:
                     bundle.putString("orderID", ((LongTermOrder) order).getOrderIDs().get(0));
                     break;
-                case OrderAdapterType.GROUP_ORDER:
                 case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                    bundle.putLong("startTime", order.getStartTime().getTime());
+                case OrderAdapterType.GROUP_ORDER:
                     bundle.putString("groupID", ((GroupOrder) order).getGroupID());
                     break;
             }
+
             String tag;
             if (!isEnd) {
-                mapFragment.bottomSheetDialogFragment = new GetInBottomSheetFragment();
+                bottomSheetDialogFragment = new GetInBottomSheetFragment();
                 tag = "getIn";
             } else if (viewType == OrderAdapterType.SINGLE_ORDER || viewType == OrderAdapterType.LONG_TERM_ORDER) {
                 if (viewType == OrderAdapterType.SINGLE_ORDER) {
@@ -423,16 +426,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                     }
                 }
 
-                mapFragment.bottomSheetDialogFragment = new GetOffBottomSheetFragment();
+                bottomSheetDialogFragment = new GetOffBottomSheetFragment();
                 tag = "getOff";
             } else {
                 mapFragment.getNewLocationWebSocket();
                 return;
             }
 
-            mapFragment.bottomSheetDialogFragment.setArguments(bundle);
-            mapFragment.bottomSheetDialogFragment.setCancelable(false);
-            mapFragment.bottomSheetDialogFragment.show(mapFragment.getChildFragmentManager(), tag);
+            bottomSheetDialogFragment.setCancelable(false);
+            bottomSheetDialogFragment.show(mapFragment.getChildFragmentManager(), tag);
+            mapFragment.bottomSheetDialogFragment = bottomSheetDialogFragment;
+            bottomSheetDialogFragment.setArguments(bundle);
             mapFragment.getNewLocationWebSocket();
         }
     }
