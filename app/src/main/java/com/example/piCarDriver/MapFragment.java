@@ -11,8 +11,6 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -100,8 +98,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         webSocketHandler = new WebSocketHandler(this);
         View view = inflater.inflate(R.layout.fragment_map, container, false);
         online = view.findViewById(R.id.online);
-        FloatingActionButton fab = view.findViewById(R.id.fab);
-        fab.setOnClickListener(v -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show());
         locationProviderClient = LocationServices.getFusedLocationProviderClient(activity);
         settingsClient = LocationServices.getSettingsClient(activity);
         createLocationCallback();
@@ -117,19 +113,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                   mapFragment.getMapAsync(this);
                               });
         online.setOnClickListener(v -> {
-            if (!isOnline) {
-                isOnline = true;
-                getNewLocationWebSocket();
-                startLocationUpdate();
-                online.setBackgroundResource(R.drawable.round_offline);
-                online.setText("下線");
-            } else {
-                stopLocationUpdates();
-                locationWebSocket.close();
-                online.setText("上線");
-                online.setBackgroundResource(R.drawable.round);
-                isOnline = false;
-            }
+            setOnlineButton();
         });
 
         return view;
@@ -363,6 +347,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected void onProgressUpdate(Queue<LatLng>... values) {
             map.clear();
             map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(values[0]));
+            LatLng latLng = new LatLng(mapFragment.location.getLatitude(), mapFragment.location.getLongitude());
+            CameraPosition cameraPosition = new CameraPosition.Builder()
+                    .target(latLng)
+                    .zoom(17)
+                    .build();
+            map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
     }
 
@@ -379,7 +369,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         @Override
         protected Void doInBackground(Location... locations) {
             try {
-                while (locations[0].distanceTo(mapFragment.location) >= 5) {
+                AsyncTask animateTask = mapFragment.animateTask;
+                while (locations[0].distanceTo(mapFragment.location) >= 5 || (animateTask != null && animateTask.getStatus() != Status.FINISHED)) {
                     Log.d(TAG, String.valueOf(locations[0].distanceTo(mapFragment.location)));
                     Thread.sleep(1000);
                 }
@@ -421,6 +412,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 if (viewType == OrderAdapterType.SINGLE_ORDER) {
                     SingleOrder singleOrder = (SingleOrder) order;
                     if (singleOrder.getOrderType() > 1) {
+                        mapFragment.setOnlineButton();
                         mapFragment.getNewLocationWebSocket();
                         return;
                     }
@@ -438,6 +430,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             mapFragment.bottomSheetDialogFragment = bottomSheetDialogFragment;
             bottomSheetDialogFragment.setArguments(bundle);
             mapFragment.getNewLocationWebSocket();
+        }
+    }
+
+    public void setOnlineButton() {
+        Log.d(TAG, String.valueOf(isOnline));
+        if (!isOnline) {
+            isOnline = true;
+            getNewLocationWebSocket();
+            startLocationUpdate();
+            online.setBackgroundResource(R.drawable.round_offline);
+            online.setText("下線");
+        } else {
+            stopLocationUpdates();
+            locationWebSocket.close();
+            online.setText("上線");
+            online.setBackgroundResource(R.drawable.round);
+            isOnline = false;
         }
     }
 

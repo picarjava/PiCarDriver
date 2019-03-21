@@ -4,11 +4,13 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
+import com.example.piCarDriver.MapFragment;
 import com.example.piCarDriver.R;
 import com.example.piCarDriver.model.OrderAdapterType;
 import com.example.piCarDriver.task.CommonTask;
@@ -32,6 +34,7 @@ public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
                 case OrderAdapterType.LONG_TERM_ORDER:
                     url = "/singleOrderApi";
                     jsonObject.addProperty("orderID", bundle.getString("orderID"));
+                    Log.d("sss", bundle.getString("orderID"));
                     break;
                 case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                     jsonObject.addProperty("startTime", bundle.getLong("startTime"));
@@ -42,6 +45,7 @@ public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
             }
             new CommonTask().execute(url, jsonObject.toString());
             dismiss();
+            ((MapFragment)getParentFragment()).setOnlineButton();
         });
         return view;
     }
