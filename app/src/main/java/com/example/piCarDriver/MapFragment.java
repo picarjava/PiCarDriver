@@ -149,6 +149,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         locationCallback = new LocationCallback(){
             @Override
             public void onLocationResult(LocationResult locationResult) {
+                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                                  .target(latLng)
+                                                                  .zoom(15)
+                                                                  .build();
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 location = locationResult.getLastLocation();
                 if (locationWebSocket.isOpen()) {
                     OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()));
@@ -216,8 +222,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         if (locationWebSocket != null)
             locationWebSocket.close();
         online.setVisibility(View.INVISIBLE);
-        online.setText("上線");
-        isOnline = false;
+        setOnlineButton();
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
                                           new LatLng(order.getStartLat(), order.getStartLng()));
         directionTask.execute(getString(R.string.direction_key));
@@ -436,6 +441,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     public void setOnlineButton() {
         Log.d(TAG, String.valueOf(isOnline));
         if (!isOnline) {
+            if (online.getVisibility() == View.INVISIBLE)
+                online.setVisibility(View.VISIBLE);
+
             isOnline = true;
             getNewLocationWebSocket();
             startLocationUpdate();
