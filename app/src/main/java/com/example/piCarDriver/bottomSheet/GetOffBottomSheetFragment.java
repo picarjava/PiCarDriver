@@ -17,6 +17,8 @@ import com.example.piCarDriver.task.CommonTask;
 import com.google.gson.JsonObject;
 
 public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
+    private final static String TAG = "GetOffBottomSheetFragment";
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -28,9 +30,10 @@ public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
             String url = null;
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("action", "getOffPiCar");
-            jsonObject.addProperty("driverID", bundle.getString("driverID"));
+            jsonObject.addProperty("memID", bundle.getString("memID"));
             switch (bundle.getInt("viewType")) {
                 case OrderAdapterType.SINGLE_ORDER:
+                    jsonObject.addProperty("singleOrder", "singleOrder");
                 case OrderAdapterType.LONG_TERM_ORDER:
                     url = "/singleOrderApi";
                     jsonObject.addProperty("orderID", bundle.getString("orderID"));
@@ -43,9 +46,13 @@ public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
                     jsonObject.addProperty("groupID", bundle.getString("groupID"));
                     break;
             }
+
+            Log.d(TAG, jsonObject.toString());
             new CommonTask().execute(url, jsonObject.toString());
+            assert getParentFragment() != null;
+            ((MapFragment)getParentFragment()).setOnlineButtonVisible();
             dismiss();
-            ((MapFragment)getParentFragment()).setOnlineButton();
+
         });
         return view;
     }

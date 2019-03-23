@@ -27,6 +27,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -53,6 +54,7 @@ public class ScheduleOrderFragment extends Fragment {
             jsonObject.addProperty("driverID", driver.getDriverID());
             List<OrderAdapterType> orderAdapterTypes = getSingleOrder(new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get());
             orderAdapterTypes.addAll(getGroupOrder(new CommonTask().execute("/groupOrderApi", jsonObject.toString()).get()));
+            orderAdapterTypes.sort(Comparator.comparing(ot -> ot.getOrder().getStartTime()));
             recyclerView.setAdapter(new OrderAdapter(orderAdapterTypes, driver, activity));
             recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         } catch (ExecutionException e) {

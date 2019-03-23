@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
@@ -141,9 +142,45 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public void executeSchedule(OrderAdapterType orderAdapterType) {
-        getSupportFragmentManager().popBackStack();
+        Log.d(TAG, String.valueOf(getSupportFragmentManager().getBackStackEntryCount()));
+        while (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            getSupportFragmentManager().popBackStackImmediate();
+        }
+
         MapFragment mapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("Map");
         if (mapFragment != null) {
+            new HoldingTask(mapFragment, orderAdapterType).execute();
+        }
+    }
+
+    private static class HoldingTask extends AsyncTask<Void, OrderAdapterType, Void> {
+        private final static String TAG = "HoldingTask";
+        private OrderAdapterType orderAdapterType;
+        private MapFragment mapFragment;
+
+        HoldingTask(MapFragment mapFragment, OrderAdapterType orderAdapterType) {
+            this.mapFragment = mapFragment;
+            this.orderAdapterType = orderAdapterType;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            //noinspection StatementWithEmptyBody
+
+                try { while (!mapFragment.isResumed()) {
+                    Thread.sleep(1000);
+                }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
             mapFragment.drawDirectionCallBack(orderAdapterType);
         }
     }

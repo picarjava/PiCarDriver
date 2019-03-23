@@ -3,6 +3,7 @@ package com.example.piCarDriver;
 public class OutputInfo {
     private String driverID;
     private LatLng latLng;
+    private boolean isExecuting;
 
     public OutputInfo() {}
 
@@ -10,9 +11,10 @@ public class OutputInfo {
         this.driverID = driverID;
     }
 
-    public OutputInfo(String driverID, LatLng latLng) {
+    public OutputInfo(String driverID, LatLng latLng, boolean isExecuting) {
         this(driverID);
         this.latLng = latLng;
+        this.isExecuting = isExecuting;
     }
 
     public String getDriverID() {
@@ -29,6 +31,14 @@ public class OutputInfo {
 
     public void setLatLng(LatLng latLng) {
         this.latLng = latLng;
+    }
+
+    public boolean isExecuting() {
+        return isExecuting;
+    }
+
+    public void setExecuting(boolean executing) {
+        isExecuting = executing;
     }
 
     public static class LatLng {
