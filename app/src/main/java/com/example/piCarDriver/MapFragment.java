@@ -110,11 +110,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         getChildFragmentManager().beginTransaction()
                                  .replace(R.id.map, mapFragment, "map")
                                  .commit();
-        locationProviderClient.getLastLocation()
-                              .addOnSuccessListener(location -> {
-                                  this.location = location;
-                                  mapFragment.getMapAsync(this);
-                              });
+        mapFragment.getMapAsync(this);
         online.setOnClickListener(v -> setOnlineButton());
         return view;
     }
@@ -140,11 +136,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     public void onMapReady(GoogleMap googleMap) {
         Log.i(TAG, Thread.currentThread().getName());
         map = googleMap;
+        if (location == null)
+            locationProviderClient.getLastLocation().addOnSuccessListener(activity, loc -> {
+               location = loc;
+               initMap();
+            });
+        else
+            initMap();
+    }
+
+    private void initMap() {
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                                                          .target(latLng)
-                                                          .zoom(15)
-                                                          .build();
+                .target(latLng)
+                .zoom(15)
+                .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         map.getUiSettings().setAllGesturesEnabled(false);
     }
@@ -258,7 +264,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
-        private final static String TAG = "CommonTask";
+        private final static String TAG = "DirectionTask";
         private MapFragment mapFragment;
         private LatLng startLatLng;
         private LatLng endLatLng;
@@ -448,6 +454,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 return;
             }
 
+            isEnd = false;
             isOnline = true;
             isExecuting = false;
             if (locationWebSocket == null || locationWebSocket.isClosed())

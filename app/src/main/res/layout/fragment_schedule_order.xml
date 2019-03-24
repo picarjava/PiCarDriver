@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/background">
 
     <TextView
         android:id="@+id/textView3"
@@ -27,7 +28,7 @@
         app:layout_constraintTop_toBottomOf="@+id/textView3"
         tools:itemCount="20"
         tools:layoutManager="android.support.v7.widget.GridLayoutManager"
-        tools:listitem="@layout/view_single_order"
+        tools:listitem="@layout/view_order"
         tools:orientation="vertical"
         tools:scrollbars="vertical" />
 </android.support.constraint.ConstraintLayout>

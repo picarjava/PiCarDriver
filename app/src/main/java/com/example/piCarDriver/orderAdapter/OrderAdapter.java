@@ -55,7 +55,9 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         TextView startLoc;
         TextView endLoc;
         TextView startTime;
+        TextView endTime;
         TextView time;
+        TextView people;
         TextView amount;
         Button btnAccept;
 
@@ -65,63 +67,20 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             startLoc = view.findViewById(R.id.startLoc);
             endLoc = view.findViewById(R.id.endLoc);
             startTime = view.findViewById(R.id.startTime);
+            endTime = view.findViewById(R.id.endTime);
             time = view.findViewById(R.id.time);
+            people = view.findViewById(R.id.people);
             amount = view.findViewById(R.id.amount);
             btnAccept = view.findViewById(R.id.acceptOrder);
-        }
-    }
-
-    class LongTermOrderHolder extends OrderHolder {
-        TextView endTime;
-
-        private LongTermOrderHolder(@NonNull View view) {
-            super(view);
-            endTime = view.findViewById(R.id.endTime);
-        }
-    }
-
-    class GroupOrderHolder extends OrderHolder {
-        TextView people;
-
-        private GroupOrderHolder(@NonNull View view) {
-            super(view);
-            this.people = view.findViewById(R.id.people);
-        }
-    }
-
-    class LongTermGroupOrderHolder extends GroupOrderHolder {
-        TextView endTime;
-
-        private LongTermGroupOrderHolder(@NonNull View view) {
-            super(view);
-            this.endTime = view.findViewById(R.id.endTime);
         }
     }
 
     @NonNull
     @Override
     public OrderHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
-        View view;
-        switch (viewType) {
-            case OrderAdapterType.SINGLE_ORDER:
-                view = LayoutInflater.from(viewGroup.getContext())
-                                     .inflate(R.layout.view_single_order, viewGroup, false);
-            return new OrderHolder(view);
-            case OrderAdapterType.LONG_TERM_ORDER:
-                view = LayoutInflater.from(viewGroup.getContext())
-                                     .inflate(R.layout.view_longterm_order, viewGroup, false);
-                return new LongTermOrderHolder(view);
-            case OrderAdapterType.GROUP_ORDER:
-                view = LayoutInflater.from(viewGroup.getContext())
-                                     .inflate(R.layout.view_group_order, viewGroup, false);
-                return new GroupOrderHolder(view);
-            case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                Log.d(TAG, "lgOrder");
-                view = LayoutInflater.from(viewGroup.getContext())
-                                     .inflate(R.layout.view_longterm_group_order, viewGroup, false);
-                return new LongTermGroupOrderHolder(view);
-        }
-        return null;
+        View view = LayoutInflater.from(viewGroup.getContext())
+                                  .inflate(R.layout.view_order, viewGroup, false);
+        return new OrderHolder(view);
     }
 
     @Override
@@ -132,15 +91,21 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         int viewType = orders.get(position).getViewType();
         Order order = orders.get(position).getOrder();
         switch (viewType) {
+            case OrderAdapterType.SINGLE_ORDER:
+                orderHolder.endTime.setVisibility(View.GONE);
+                orderHolder.people.setVisibility(View.GONE);
+                break;
             case OrderAdapterType.LONG_TERM_ORDER:
-                ((LongTermOrderHolder) orderHolder).endTime.setText(dateFormat.format(order.getEndTime()));
+                orderHolder.endTime.setText(dateFormat.format(order.getEndTime()));
+                orderHolder.people.setVisibility(View.GONE);
                 break;
             case OrderAdapterType.GROUP_ORDER:
-                ((GroupOrderHolder) orderHolder).people.setText(String.valueOf(((GroupOrder) order).getPeople()));
+                orderHolder.endTime.setVisibility(View.GONE);
+                orderHolder.people.setText(String.valueOf(((GroupOrder) order).getPeople()));
                 break;
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                ((LongTermGroupOrderHolder) orderHolder).people.setText(String.valueOf(((GroupOrder) order).getPeople()) + "人");
-                ((LongTermGroupOrderHolder) orderHolder).endTime.setText(dateFormat.format(order.getEndTime()));
+                orderHolder.people.setText(String.valueOf(((GroupOrder) order).getPeople()) + "人");
+                orderHolder.endTime.setText(dateFormat.format(order.getEndTime()));
                 break;
         }
         orderHolder.startLoc.setText(order.getStartLoc());
@@ -148,8 +113,8 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         orderHolder.startTime.setText(dateFormat.format(order.getStartTime()));
         Log.d(TAG, order.getStartTime().toString());
         orderHolder.time.setText(timeFormat.format(order.getStartTime()));
-        orderHolder.amount.setText(String.valueOf(order.getTotalAmount()) + "元");
         if (activity == null) {
+            orderHolder.amount.setText(String.valueOf(order.getTotalAmount()) + "元");
             orderHolder.btnAccept.setOnClickListener((View view) -> {
                 try {
                     view.getContext();
@@ -190,8 +155,9 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 }
             });
         } else {
+            orderHolder.amount.setVisibility(View.GONE);
             orderHolder.btnAccept.setVisibility(View.GONE);
-            orderHolder.container.setOnClickListener(v -> showDownloadDialog(v.getContext(), orders.get(orderHolder.getAdapterPosition())));
+            orderHolder.container.setOnClickListener(v -> showExecuteDialog(v.getContext(), orders.get(orderHolder.getAdapterPosition())));
         }
     }
 
@@ -205,14 +171,21 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         return orders.size();
     }
 
-    private void showDownloadDialog(Context context, OrderAdapterType orderAdapterType) {
+    private void showExecuteDialog(Context context, OrderAdapterType orderAdapterType) {
+        Order order = orderAdapterType.getOrder();
+        String stringBuilder = "執行從 " +
+                               order.getStartLoc() +
+                               " 到 " +
+                               order.getEndLoc() +
+                               "\n開始時間: " +
+                               new SimpleDateFormat("MM-dd HH:mm");
         new AlertDialog.Builder(context)
-                .setTitle("找不到掃描器")
-                .setMessage("請至Google play商店下載")
-                .setPositiveButton("Yes", (d, i)->{
+                .setTitle("執行訂單")
+                .setMessage(stringBuilder)
+                .setNegativeButton("不", (d, i)-> d.cancel())
+                .setPositiveButton("好喔", (d, i)->{
                     activity.executeSchedule(orderAdapterType);
                     d.dismiss();
-                }).setNegativeButton("no", (d, i)-> d.cancel())
-                .show();
+                }).show();
     }
 }

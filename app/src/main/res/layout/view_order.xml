@@ -5,7 +5,19 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="144dp"
+    android:layout_marginTop="8dp"
+    android:background="@drawable/corner"
     android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/labStartLoc"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:gravity="center"
+        android:layout_marginStart="8dp"
+        android:text="上車地點"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/startLoc"
@@ -14,9 +26,19 @@
         android:gravity="center"
         android:text="上車地點"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/labStartLoc"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/labEndLoc"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:gravity="center"
+        android:text="下車地點"
+        app:layout_constraintEnd_toStartOf="@+id/endLoc"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/labStartLoc" />
 
     <TextView
         android:id="@+id/endLoc"
@@ -25,18 +47,17 @@
         android:gravity="center"
         android:text="下車地點"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/startLoc"
+        app:layout_constraintStart_toEndOf="@+id/labEndLoc"
         app:layout_constraintTop_toBottomOf="@+id/startLoc" />
 
     <TextView
         android:id="@+id/startTime"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        app:layout_constraintHorizontal_weight="0.5"
         android:gravity="center"
         android:text="上車時間"
         app:layout_constraintEnd_toStartOf="@+id/endTime"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.6"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/endLoc" />
 
@@ -44,11 +65,10 @@
         android:id="@+id/endTime"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        app:layout_constraintHorizontal_weight="0.5"
         android:gravity="center"
         android:text="下車時間"
         app:layout_constraintEnd_toStartOf="@+id/time"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.6"
         app:layout_constraintStart_toEndOf="@+id/startTime"
         app:layout_constraintTop_toTopOf="@+id/startTime" />
 
@@ -57,10 +77,9 @@
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:gravity="center"
-        app:layout_constraintHorizontal_weight="0.5"
         android:text="時分"
         app:layout_constraintEnd_toStartOf="@+id/people"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.5"
         app:layout_constraintStart_toEndOf="@+id/endTime"
         app:layout_constraintTop_toTopOf="@+id/endTime" />
 
@@ -69,10 +88,9 @@
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:gravity="center"
-        app:layout_constraintHorizontal_weight="0.5"
         android:text="人數"
         app:layout_constraintEnd_toStartOf="@+id/amount"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.5"
         app:layout_constraintStart_toEndOf="@+id/time"
         app:layout_constraintTop_toTopOf="@+id/time" />
 
@@ -82,10 +100,9 @@
         android:layout_height="48dp"
         android:layout_weight="1"
         android:gravity="center"
-        app:layout_constraintHorizontal_weight="1"
         android:text="金額"
         app:layout_constraintEnd_toStartOf="@+id/acceptOrder"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.5"
         app:layout_constraintStart_toEndOf="@+id/people"
         app:layout_constraintTop_toTopOf="@+id/people" />
 
@@ -93,10 +110,10 @@
         android:id="@+id/acceptOrder"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        app:layout_constraintHorizontal_weight="1"
         android:text="接受"
+        android:background="@drawable/button"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_weight="0.8"
         app:layout_constraintStart_toEndOf="@+id/amount"
         app:layout_constraintTop_toTopOf="@+id/amount" />
 </android.support.constraint.ConstraintLayout>

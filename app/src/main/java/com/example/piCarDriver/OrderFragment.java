@@ -14,8 +14,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.example.piCarDriver.orderPageFragment.OrderPageFragment;
-
 import java.util.List;
 
 public class OrderFragment extends Fragment {
@@ -102,14 +100,5 @@ public class OrderFragment extends Fragment {
         super.onSaveInstanceState(outState);
         Log.d(TAG, String.valueOf(isHidden()));
         outState.putBoolean("Show", isHidden());
-    }
-
-    private OrderPage newOrderPage(String url, String action, String title) {
-        OrderPageFragment orderPageFragment = new OrderPageFragment();
-        Bundle bundle = new Bundle();
-        bundle.putString("url", url);
-        bundle.putString("action", action);
-        orderPageFragment.setArguments(bundle);
-        return new OrderPage(orderPageFragment, title);
     }
 }
