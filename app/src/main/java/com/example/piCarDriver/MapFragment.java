@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.example.piCarDriver.bottomSheet.GetInBottomSheetFragment;
 import com.example.piCarDriver.bottomSheet.GetOffBottomSheetFragment;
@@ -63,7 +64,6 @@ import java.util.Queue;
 public class MapFragment extends Fragment implements OnMapReadyCallback, WebSocketHandler.WebSocketCallBack {
     private final static String TAG = "MapFragment";
     private static final int REQUEST_CHECK_SETTINGS = 1;
-    private boolean isSimulate;
     private boolean isOnline;
     private boolean isExecuting;
     private boolean isEnd;
@@ -76,13 +76,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private Location location;
     private MainActivity activity;
     private Button online;
+    private ToggleButton toggleButton;
     private LocationWebSocket locationWebSocket;
     private Driver driver;
     private OrderAdapterType orderAdapterType;
-    private LocationUpdateTask locationUpdateTask;
-    private DirectionTask directionTask;
-    private AnimateTask animateTask;
-    private ArriveLocTask arriveLocTask;
+    private AsyncTask locationUpdateTask, directionTask, animateTask, arriveLocTask;
     private WebSocketHandler webSocketHandler;
     private BottomSheetDialogFragment bottomSheetDialogFragment;
 
@@ -101,6 +99,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         webSocketHandler = new WebSocketHandler(this);
         View view = inflater.inflate(R.layout.fragment_map, container, false);
         online = view.findViewById(R.id.online);
+        toggleButton = view.findViewById(R.id.toggleButton);
+        toggleButton.setOnCheckedChangeListener((v, b)-> {
+            if (isOnline) {
+                toggleButton.setClickable(false);
+            }
+        });
         locationProviderClient = LocationServices.getFusedLocationProviderClient(activity);
         settingsClient = LocationServices.getSettingsClient(activity);
         createLocationCallback();
@@ -119,6 +123,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     public void onPause() {
         super.onPause();
         Log.d(TAG, "pause");
+        stopLocationUpdates();
         if (directionTask != null)
             directionTask.cancel(true);
         if (animateTask != null)
@@ -148,9 +153,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private void initMap() {
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         CameraPosition cameraPosition = new CameraPosition.Builder()
-                .target(latLng)
-                .zoom(15)
-                .build();
+                                                          .target(latLng)
+                                                          .zoom(15)
+                                                          .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         map.getUiSettings().setAllGesturesEnabled(false);
     }
@@ -226,8 +231,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         this.orderAdapterType = orderAdapterType;
         Order order = orderAdapterType.getOrder();
         Log.d(TAG, order.getStartLat() + " " + order.getStartLng());
-        stopLocationUpdates();
-        isSimulate = true;
+        if (toggleButton.isChecked())
+            stopLocationUpdates();
         // ensure is online
         if (!isOnline) {
             setOnlineButton();
@@ -235,8 +240,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         online.setVisibility(View.INVISIBLE);
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
-                                          new LatLng(order.getStartLat(), order.getStartLng()));
-        directionTask.execute(getString(R.string.direction_key));
+                                          new LatLng(order.getStartLat(), order.getStartLng())).execute(getString(R.string.direction_key));
     }
 
     @Override
@@ -244,8 +248,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         isEnd = true;
         Order order = orderAdapterType.getOrder();
         directionTask = new DirectionTask(this, new LatLng(location.getLatitude(), location.getLongitude()),
-                                          new LatLng(order.getEndLat(), order.getEndLng()));
-        directionTask.execute(getString(R.string.direction_key));
+                                          new LatLng(order.getEndLat(), order.getEndLng())).execute(getString(R.string.direction_key));
         bottomSheetDialogFragment.dismiss();
 
     }
@@ -254,13 +257,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private void latLngsCallBack(List<LatLng> latLngs) {
         Log.d(TAG, "latLngsCallBack");
         Order order = orderAdapterType.getOrder();
-        animateTask = new AnimateTask(this, map);
-        arriveLocTask = new ArriveLocTask(this, isEnd);
         Location endLocation = new Location("");
         endLocation.setLatitude(order.getEndLat());
         endLocation.setLongitude(order.getEndLng());
-        arriveLocTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
-        animateTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
+
+        if (toggleButton.isChecked()) {
+            arriveLocTask = new ArriveLocTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
+            animateTask = new AnimateTask(this, map).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
+        } else {
+            if (location.distanceTo(endLocation) <= 5 || latLngs.isEmpty())
+                onArrive();
+            else {
+                map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
+                LatLng latLngNow = new LatLng(location.getLatitude(), location.getLongitude());
+                CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                                  .target(latLngNow)
+                                                                  .zoom(17)
+                                                                  .build();
+                map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                directionTask = new DirectionTask(this, latLngNow, latLngs.get(latLngs.size() - 1)).execute(getString(R.string.direction_key));
+            }
+        }
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
@@ -285,6 +302,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                                    .append(destination).append(key);
             Log.d(TAG, url.toString());
             try {
+                if (!mapFragment.toggleButton.isChecked())
+                    Thread.sleep(1000);
+
                 HttpURLConnection connection = (HttpURLConnection) new URL(url.toString()).openConnection();
                 connection.setDoInput(true);
                 connection.setDoOutput(true);
@@ -302,6 +322,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 return jsonIn.toString();
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                Log.d(TAG, "thread interrupted");
             }
 
             return null;
@@ -320,7 +342,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                           .get("points")
                                           .getAsString();
             List<LatLng> latLngs = PolyUtil.decode(encodeLine);
-            mapFragment.map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
             mapFragment.latLngsCallBack(latLngs);
         }
     }
@@ -375,11 +396,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private static class ArriveLocTask extends AsyncTask<Location, Void, Void> {
         private final static String TAG = "ArriveLocTask";
         private MapFragment mapFragment;
-        private boolean isEnd;
 
-        ArriveLocTask(MapFragment mapFragment, boolean isEnd) {
+        ArriveLocTask(MapFragment mapFragment) {
             this.mapFragment = mapFragment;
-            this.isEnd = isEnd;
         }
 
         @Override
@@ -387,8 +406,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             try {
                 AsyncTask animateTask = mapFragment.animateTask;
                 while (locations[0].distanceTo(mapFragment.location) >= 5) {
-                    if (animateTask != null)
-                    Log.d(TAG, animateTask.getStatus().toString());
                     if (animateTask != null && animateTask.getStatus() == Status.FINISHED)
                         break;
 
@@ -404,48 +421,52 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            Log.d(TAG, "arrive");
-            Bundle bundle = new Bundle();
-            BottomSheetDialogFragment bottomSheetDialogFragment;
-            Order order = mapFragment.orderAdapterType.getOrder();
-            int viewType = mapFragment.orderAdapterType.getViewType();
-            bundle.putInt("viewType", viewType);
-            bundle.putString("memID", order.getMemId());
-            switch (viewType) {
-                case OrderAdapterType.SINGLE_ORDER:
-                    bundle.putString("orderID", ((SingleOrder) order).getOrderID());
-                    break;
-                case OrderAdapterType.LONG_TERM_ORDER:
-                    bundle.putString("orderID", ((LongTermOrder) order).getOrderIDs().get(0));
-                    break;
-                case OrderAdapterType.LONG_TERM_GROUP_ORDER:
-                    bundle.putLong("startTime", order.getStartTime().getTime());
-                case OrderAdapterType.GROUP_ORDER:
-                    bundle.putString("groupID", ((GroupOrder) order).getGroupID());
-                    break;
-            }
-
-            String tag;
-            if (!isEnd) {
-                bottomSheetDialogFragment = new GetInBottomSheetFragment();
-                tag = "getIn";
-            } else {
-                bottomSheetDialogFragment = new GetOffBottomSheetFragment();
-                tag = "getOff";
-            }
-
-            bottomSheetDialogFragment.setCancelable(false);
-            mapFragment.bottomSheetDialogFragment = bottomSheetDialogFragment;
-            bottomSheetDialogFragment.setArguments(bundle);
-            bottomSheetDialogFragment.show(mapFragment.getChildFragmentManager(), tag);
-            if (!isEnd)
-                mapFragment.getNewLocationWebSocket();
+            mapFragment.onArrive();
         }
+    }
+
+    private void onArrive() {
+        Log.d(TAG, "arrive");
+
+        Bundle bundle = new Bundle();
+        Order order = orderAdapterType.getOrder();
+        int viewType = orderAdapterType.getViewType();
+        bundle.putInt("viewType", viewType);
+        bundle.putString("memID", order.getMemId());
+        switch (viewType) {
+            case OrderAdapterType.SINGLE_ORDER:
+                bundle.putString("orderID", ((SingleOrder) order).getOrderID());
+                break;
+            case OrderAdapterType.LONG_TERM_ORDER:
+                bundle.putString("orderID", ((LongTermOrder) order).getOrderIDs().get(0));
+                break;
+            case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                bundle.putLong("startTime", order.getStartTime().getTime());
+            case OrderAdapterType.GROUP_ORDER:
+                bundle.putString("groupID", ((GroupOrder) order).getGroupID());
+                break;
+        }
+
+        String tag;
+        if (!isEnd) {
+            bottomSheetDialogFragment = new GetInBottomSheetFragment();
+            tag = "getIn";
+        } else {
+            bottomSheetDialogFragment = new GetOffBottomSheetFragment();
+            tag = "getOff";
+        }
+
+        bottomSheetDialogFragment.setCancelable(false);
+        bottomSheetDialogFragment.setArguments(bundle);
+        bottomSheetDialogFragment.show(getChildFragmentManager(), tag);
+        if (!isEnd)
+            getNewLocationWebSocket();
     }
 
     private void setOnlineButton() {
         Log.d(TAG, String.valueOf(isOnline));
         if (!isOnline) {
+            toggleButton.setClickable(false);
             if (online.getVisibility() == View.INVISIBLE)
                 online.setVisibility(View.VISIBLE);
 
@@ -460,11 +481,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             if (locationWebSocket == null || locationWebSocket.isClosed())
                 getNewLocationWebSocket();
 
-            if (!isSimulate)
+            if (!toggleButton.isChecked())
                 startLocationUpdate();
 
-            locationUpdateTask = new LocationUpdateTask(this);
-            locationUpdateTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            locationUpdateTask = new LocationUpdateTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             online.setBackgroundResource(R.drawable.round_offline);
             online.setText("下線");
         } else {
@@ -473,6 +493,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             online.setText("上線");
             online.setBackgroundResource(R.drawable.round);
             isOnline = false;
+            toggleButton.setClickable(true);
             locationUpdateTask.cancel(true);
         }
     }
@@ -501,13 +522,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             Driver driver = mapFragment.driver;
             boolean isExecuting = mapFragment.isExecuting;
             try {
+                //noinspection InfiniteLoopStatement
                 while (true) {
                     if (webSocket != null && webSocket.isOpen()) {
                         OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()), isExecuting);
-                        webSocket.send(new Gson().toJson(outputInfo));
+                        JsonObject jsonObject = new JsonObject();
+                        jsonObject.add("outputInfo", new Gson().toJsonTree(outputInfo));
+                        webSocket.send(jsonObject.toString());
                     }
 
-                    Thread.sleep(5000);
+                    Thread.sleep(1000);
                 }
             } catch (InterruptedException e) {
                 Log.d(TAG, "thread interrupted");
