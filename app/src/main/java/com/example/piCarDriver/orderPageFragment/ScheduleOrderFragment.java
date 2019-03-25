@@ -25,7 +25,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -70,19 +69,17 @@ public class ScheduleOrderFragment extends Fragment {
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
         JsonObject jsonObjIn = gson.fromJson(jsonIn, JsonObject.class);
         List<OrderAdapterType> orderAdapterTypes = new ArrayList<>();
-        Type type =  new TypeToken<List<SingleOrder>>(){}.getType();
-        List<SingleOrder> singleOrders = gson.fromJson(jsonObjIn.get("singleOrder").getAsString(), type);
+        List<SingleOrder> singleOrders = gson.fromJson(jsonObjIn.get("singleOrder"), new TypeToken<List<SingleOrder>>(){}.getType());
         if (singleOrders != null)
             singleOrders.stream()
-                    .map(o -> new OrderAdapterType(o, OrderAdapterType.SINGLE_ORDER))
-                    .forEach(orderAdapterTypes::add);
+                        .map(o -> new OrderAdapterType(o, OrderAdapterType.SINGLE_ORDER))
+                        .forEach(orderAdapterTypes::add);
 
-        type = new TypeToken<List<LongTermOrder>>(){}.getType();
-        List<LongTermOrder> longTermOrders = gson.fromJson(jsonObjIn.get("longTermOrder").getAsString(), type);
+        List<LongTermOrder> longTermOrders = gson.fromJson(jsonObjIn.get("longTermOrder"), new TypeToken<List<LongTermOrder>>(){}.getType());
         if (longTermOrders != null)
             longTermOrders.stream()
-                    .map(o -> new OrderAdapterType(o, OrderAdapterType.LONG_TERM_ORDER))
-                    .forEach(orderAdapterTypes::add);
+                          .map(o -> new OrderAdapterType(o, OrderAdapterType.LONG_TERM_ORDER))
+                          .forEach(orderAdapterTypes::add);
 
         return orderAdapterTypes;
     }
@@ -91,15 +88,13 @@ public class ScheduleOrderFragment extends Fragment {
         Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm").create();
         JsonObject jsonObjIn = gson.fromJson(jsonIn, JsonObject.class);
         List<OrderAdapterType> orderAdapterTypes = new ArrayList<>();
-        Type type =  new TypeToken<List<GroupOrder>>(){}.getType();
-        List<GroupOrder> groupOrders = gson.fromJson(jsonObjIn.get("groupOrder").getAsString(), type);
+        List<GroupOrder> groupOrders = gson.fromJson(jsonObjIn.get("groupOrder"), new TypeToken<List<GroupOrder>>(){}.getType());
         if (groupOrders != null)
             groupOrders.stream()
                        .map(o -> new OrderAdapterType(o, OrderAdapterType.GROUP_ORDER))
                        .forEach(orderAdapterTypes::add);
 
-        type = new TypeToken<List<GroupOrder>>(){}.getType();
-        List<GroupOrder> longTermGroupOrders = gson.fromJson(jsonObjIn.get("longTermGroupOrder").getAsString(), type);
+        List<GroupOrder> longTermGroupOrders = gson.fromJson(jsonObjIn.get("longTermGroupOrder"), new TypeToken<List<GroupOrder>>(){}.getType());
         if (longTermGroupOrders != null)
             longTermGroupOrders.stream()
                                .map(o -> new OrderAdapterType(o, OrderAdapterType.LONG_TERM_GROUP_ORDER))

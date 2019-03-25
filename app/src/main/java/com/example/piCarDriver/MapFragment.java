@@ -262,12 +262,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         endLocation.setLongitude(order.getEndLng());
 
         if (toggleButton.isChecked()) {
-            arriveLocTask = new ArriveLocTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
+            arriveLocTask = new ArriveLocTask(this, latLngs).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
             animateTask = new AnimateTask(this, map).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
         } else {
             if (location.distanceTo(endLocation) <= 5 || latLngs.isEmpty())
                 onArrive();
             else {
+                sendOnExecuting(latLngs);
                 map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
                 LatLng latLngNow = new LatLng(location.getLatitude(), location.getLongitude());
                 CameraPosition cameraPosition = new CameraPosition.Builder()
@@ -277,6 +278,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 directionTask = new DirectionTask(this, latLngNow, latLngs.get(latLngs.size() - 1)).execute(getString(R.string.direction_key));
             }
+        }
+    }
+
+    private void sendOnExecuting(List<LatLng> latLngs) {
+        if (locationWebSocket != null && locationWebSocket.isOpen()) {
+            Gson gson = new Gson();
+            Order order = orderAdapterType.getOrder();
+            OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()), false);
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("getIn", isEnd);
+            jsonObject.add("latLngs", gson.toJsonTree(latLngs));
+            jsonObject.add("outputInfo", gson.toJsonTree(outputInfo));
+            jsonObject.addProperty("memID", order.getMemId());
+            locationWebSocket.send(jsonObject.toString());
         }
     }
 
@@ -370,6 +385,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                     location.setLatitude(latLng.latitude);
                     location.setLongitude(latLng.longitude);
                     mapFragment.location = location;
+                    mapFragment.sendOnExecuting((List<LatLng>) lngs);
                     publishProgress(lngs);
                     lngs.poll();
                 }
@@ -386,9 +402,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(values[0]));
             LatLng latLng = new LatLng(mapFragment.location.getLatitude(), mapFragment.location.getLongitude());
             CameraPosition cameraPosition = new CameraPosition.Builder()
-                    .target(latLng)
-                    .zoom(17)
-                    .build();
+                                                              .target(latLng)
+                                                              .zoom(17)
+                                                              .build();
             map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         }
     }
@@ -396,16 +412,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private static class ArriveLocTask extends AsyncTask<Location, Void, Void> {
         private final static String TAG = "ArriveLocTask";
         private MapFragment mapFragment;
+        private List<LatLng> list;
 
-        ArriveLocTask(MapFragment mapFragment) {
+        ArriveLocTask(MapFragment mapFragment, List<LatLng> list) {
             this.mapFragment = mapFragment;
+            this.list = list;
         }
 
         @Override
         protected Void doInBackground(Location... locations) {
             try {
                 AsyncTask animateTask = mapFragment.animateTask;
-                while (locations[0].distanceTo(mapFragment.location) >= 5) {
+                while (locations[0].distanceTo(mapFragment.location) >= 5 || list.isEmpty()) {
                     if (animateTask != null && animateTask.getStatus() == Status.FINISHED)
                         break;
 
@@ -427,7 +445,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     private void onArrive() {
         Log.d(TAG, "arrive");
-
         Bundle bundle = new Bundle();
         Order order = orderAdapterType.getOrder();
         int viewType = orderAdapterType.getViewType();
@@ -450,6 +467,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         String tag;
         if (!isEnd) {
             bottomSheetDialogFragment = new GetInBottomSheetFragment();
+            isEnd = true;
             tag = "getIn";
         } else {
             bottomSheetDialogFragment = new GetOffBottomSheetFragment();
@@ -459,8 +477,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         bottomSheetDialogFragment.setCancelable(false);
         bottomSheetDialogFragment.setArguments(bundle);
         bottomSheetDialogFragment.show(getChildFragmentManager(), tag);
-        if (!isEnd)
-            getNewLocationWebSocket();
     }
 
     private void setOnlineButton() {
@@ -498,7 +514,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         }
     }
 
-    private void getNewLocationWebSocket() {
+    public void getNewLocationWebSocket() {
         try {
             URI uri = new URI(Constants.WEB_SOCKET_URL + "/locationWebSocket/" + driver.getDriverID());
             locationWebSocket = new LocationWebSocket(webSocketHandler, uri);
@@ -520,12 +536,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             LocationWebSocket webSocket = mapFragment.locationWebSocket;
             Location location = mapFragment.location;
             Driver driver = mapFragment.driver;
-            boolean isExecuting = mapFragment.isExecuting;
             try {
-                //noinspection InfiniteLoopStatement
-                while (true) {
+                while (!mapFragment.isExecuting) {
                     if (webSocket != null && webSocket.isOpen()) {
-                        OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()), isExecuting);
+                        OutputInfo outputInfo = new OutputInfo(driver.getDriverID(), new OutputInfo.LatLng(location.getLatitude(), location.getLongitude()), false);
                         JsonObject jsonObject = new JsonObject();
                         jsonObject.add("outputInfo", new Gson().toJsonTree(outputInfo));
                         webSocket.send(jsonObject.toString());

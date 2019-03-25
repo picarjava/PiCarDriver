@@ -36,7 +36,7 @@ public class LocationWebSocket extends WebSocketClient {
         String singleOrder = "singleOrder";
         String state = "state";
         if (jsonObject.has(singleOrder)) {
-            Order vo = gson.fromJson(jsonObject.get(singleOrder).getAsString(), SingleOrder.class);
+            Order vo = gson.fromJson(jsonObject.get(singleOrder), SingleOrder.class);
             handler.obtainMessage(WebSocketHandler.SINGLE_ORDER_RECEIVED, vo).sendToTarget();
         } else if (jsonObject.has(state)) {
             if ("OK".equals(jsonObject.get(state).getAsString()))

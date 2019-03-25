@@ -165,22 +165,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         protected Void doInBackground(Void... voids) {
-            //noinspection StatementWithEmptyBody
-
-                try { while (!mapFragment.isResumed()) {
-                    Thread.sleep(1000);
-                }
+                try {
+                    while (!mapFragment.isResumed())
+                        Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
 
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
             mapFragment.drawDirectionCallBack(orderAdapterType);
         }
     }
@@ -259,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                .apply();
                     driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
-                                              .fromJson(jsonObject.get("driver").getAsString(), Driver.class);
+                                              .fromJson(jsonObject.get("driver"), Driver.class);
                     jsonObject = new JsonObject();
                     jsonObject.addProperty("action", "getPicture");
                     jsonObject.addProperty("memID", driver.getMemID());

@@ -50,7 +50,9 @@ public class GetOffBottomSheetFragment extends BottomSheetDialogFragment {
             Log.d(TAG, jsonObject.toString());
             new CommonTask().execute(url, jsonObject.toString());
             assert getParentFragment() != null;
-            ((MapFragment)getParentFragment()).setOnlineButtonVisible();
+            MapFragment mapFragment = ((MapFragment)getParentFragment());
+            mapFragment.setOnlineButtonVisible();
+            mapFragment.getNewLocationWebSocket();
             dismiss();
 
         });
