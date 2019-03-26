@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -53,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private DrawerLayout drawer;
     private NavigationView navigationView;
     private List<OrderPage> orderPages;
+    private AsyncTask imageTask;
 
     @SuppressLint("MissingPermission")
     @Override
@@ -84,6 +86,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         getSupportFragmentManager().beginTransaction()
                                    .replace(R.id.frameLayout, new MapFragment(), "Map")
                                    .commit();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        imageTask.cancel(true);
     }
 
     @Override
@@ -259,13 +267,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     jsonObject = new JsonObject();
                     jsonObject.addProperty("action", "getPicture");
                     jsonObject.addProperty("memID", driver.getMemID());
-                    try {
-                        new ImageTask(this).execute("/memberApi", jsonObject.toString()).get();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    imageTask = new ImageTask(this).execute("/memberApi", jsonObject.toString());
                     return false;
                 }
             }
@@ -318,5 +320,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public List<OrderPage> orderPagesCallBack() {
         return orderPages;
+    }
+
+    @Override
+    public Drawable getPhoto() {
+        ImageView headShot = navigationView.getHeaderView(0).findViewById(R.id.headShot);
+        return  headShot.getDrawable();
     }
 }

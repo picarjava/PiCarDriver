@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentSender;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -43,8 +44,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -263,7 +266,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         if (toggleButton.isChecked()) {
             arriveLocTask = new ArriveLocTask(this, latLngs).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
-            animateTask = new AnimateTask(this, map).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
+            animateTask = new AnimateTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, latLngs);
         } else {
             if (location.distanceTo(endLocation) <= 5 || latLngs.isEmpty())
                 onArrive();
@@ -368,9 +371,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         private MapFragment mapFragment;
         private Queue<LatLng> lngs;
 
-        AnimateTask(MapFragment mapFragment,GoogleMap map) {
-            this.map = map;
+        AnimateTask(MapFragment mapFragment) {
             this.mapFragment = mapFragment;
+            this.map = mapFragment.map;
         }
 
         @Override
@@ -405,7 +408,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                                               .target(latLng)
                                                               .zoom(17)
                                                               .build();
+            map.addMarker(new MarkerOptions().position(latLng).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) mapFragment.activity.getPhoto()).getBitmap())));
             map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
         }
     }
 
