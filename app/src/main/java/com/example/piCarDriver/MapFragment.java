@@ -456,7 +456,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         Order order = orderAdapterType.getOrder();
         int viewType = orderAdapterType.getViewType();
         bundle.putInt("viewType", viewType);
-        bundle.putString("memID", order.getMemId());
         switch (viewType) {
             case OrderAdapterType.SINGLE_ORDER:
                 bundle.putString("orderID", ((SingleOrder) order).getOrderID());
@@ -474,11 +473,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         String tag;
         if (!isEnd) {
             bottomSheetDialogFragment = new GetInBottomSheetFragment();
+            bundle.putString("driverID", driver.getDriverID());
             isEnd = true;
             tag = "getIn";
         } else {
             map.clear();
             bottomSheetDialogFragment = new GetOffBottomSheetFragment();
+            bundle.putString("memID", order.getMemId());
             tag = "getOff";
         }
 
