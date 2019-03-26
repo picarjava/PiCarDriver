@@ -427,9 +427,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         @Override
         protected Void doInBackground(Location... locations) {
             try {
-                AsyncTask animateTask = mapFragment.animateTask;
-                while (locations[0].distanceTo(mapFragment.location) >= 5 || list.isEmpty()) {
-                    if (animateTask != null && animateTask.getStatus() == Status.FINISHED)
+                while (locations[0].distanceTo(mapFragment.location) >= 5) {
+                    if (mapFragment.toggleButton.isChecked() && list.isEmpty())
                         break;
 
                     Log.d(TAG, String.valueOf(locations[0].distanceTo(mapFragment.location)));

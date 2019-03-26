@@ -101,7 +101,7 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 break;
             case OrderAdapterType.GROUP_ORDER:
                 orderHolder.endTime.setVisibility(View.GONE);
-                orderHolder.people.setText(String.valueOf(((GroupOrder) order).getPeople()));
+                orderHolder.people.setText(String.valueOf(((GroupOrder) order).getPeople()) + "人");
                 break;
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
                 orderHolder.people.setText(String.valueOf(((GroupOrder) order).getPeople()) + "人");
@@ -178,7 +178,7 @@ public class OrderAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                                " 到 " +
                                order.getEndLoc() +
                                "\n開始時間: " +
-                               new SimpleDateFormat("MM-dd HH:mm");
+                               new SimpleDateFormat("MM-dd HH:mm").format(order.getStartTime());
         new AlertDialog.Builder(context)
                 .setTitle("執行訂單")
                 .setMessage(stringBuilder)
