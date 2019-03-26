@@ -224,7 +224,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         // stopped state. Doing so helps battery performance and is especially
         // recommended in applications that request frequent location updates.
         locationProviderClient.removeLocationUpdates(locationCallback)
-                .addOnCompleteListener(activity, task -> Log.e(TAG, "Cancel location updates requested"));
+                              .addOnCompleteListener(activity, task -> Log.e(TAG, "Cancel location updates requested"));
     }
 
     @Override
@@ -359,7 +359,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                           .getAsJsonObject()
                                           .get("points")
                                           .getAsString();
-            List<LatLng> latLngs = PolyUtil.decode(encodeLine);
+            List<LatLng> latLngs = new LinkedList<>(PolyUtil.decode(encodeLine));
             mapFragment.latLngsCallBack(latLngs);
         }
     }
@@ -378,7 +378,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
         @Override
         protected Void doInBackground(List<LatLng>... lists) {
-            lngs = new LinkedList<>(lists[0]);
+            lngs = (LinkedList) lists[0];
             try {
                 while (!lngs.isEmpty()) {
                     Log.d(TAG, "driving");
@@ -428,6 +428,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected Void doInBackground(Location... locations) {
             try {
                 while (locations[0].distanceTo(mapFragment.location) >= 5) {
+//                    Log.d(TAG, String.valueOf(list.size()));
                     if (mapFragment.toggleButton.isChecked() && list.isEmpty())
                         break;
 
