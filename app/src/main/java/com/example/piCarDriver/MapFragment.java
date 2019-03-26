@@ -160,6 +160,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                                           .zoom(15)
                                                           .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        map.setMinZoomPreference(19);
         map.getUiSettings().setAllGesturesEnabled(false);
     }
 
@@ -261,8 +262,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         Log.d(TAG, "latLngsCallBack");
         Order order = orderAdapterType.getOrder();
         Location endLocation = new Location("");
-        endLocation.setLatitude(order.getEndLat());
-        endLocation.setLongitude(order.getEndLng());
+        endLocation.setLatitude(latLngs.get(latLngs.size() - 1).latitude);
+        endLocation.setLongitude(latLngs.get(latLngs.size() - 1).longitude);
 
         if (toggleButton.isChecked()) {
             arriveLocTask = new ArriveLocTask(this, latLngs).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, endLocation);
@@ -403,14 +404,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         protected void onProgressUpdate(Queue<LatLng>... values) {
             map.clear();
             map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(values[0]));
-            LatLng latLng = new LatLng(mapFragment.location.getLatitude(), mapFragment.location.getLongitude());
-            CameraPosition cameraPosition = new CameraPosition.Builder()
-                                                              .target(latLng)
-                                                              .zoom(17)
-                                                              .build();
-            map.addMarker(new MarkerOptions().position(latLng).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) mapFragment.activity.getPhoto()).getBitmap())));
-            map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
+            if (!values[0].isEmpty()) {
+                LatLng latLng = values[0].element();
+                CameraPosition cameraPosition = new CameraPosition.Builder()
+                        .target(latLng)
+                        .zoom(17)
+                        .build();
+                map.addMarker(new MarkerOptions().position(latLng).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) mapFragment.activity.getPhoto()).getBitmap())));
+                map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            }
         }
     }
 
@@ -475,6 +477,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             isEnd = true;
             tag = "getIn";
         } else {
+            map.clear();
             bottomSheetDialogFragment = new GetOffBottomSheetFragment();
             tag = "getOff";
         }
@@ -562,6 +565,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     public void setOnlineButtonVisible() {
         isExecuting = false;
+        isEnd = false;
+        locationUpdateTask = new LocationUpdateTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         online.setVisibility(View.VISIBLE);
     }
 }
