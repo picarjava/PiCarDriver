@@ -33,8 +33,9 @@ public class GetInBottomSheetFragment extends BottomSheetDialogFragment {
             case OrderAdapterType.LONG_TERM_ORDER:
                 jsonObject.addProperty("orderID", bundle.getString("orderID"));
                 break;
-            case OrderAdapterType.GROUP_ORDER:
             case OrderAdapterType.LONG_TERM_GROUP_ORDER:
+                jsonObject.addProperty("startTime", bundle.getString("startTime"));
+            case OrderAdapterType.GROUP_ORDER:
                 jsonObject.addProperty("groupID", bundle.getString("groupID"));
                 break;
         }

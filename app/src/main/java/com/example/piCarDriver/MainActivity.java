@@ -255,21 +255,25 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             if (jsonIn != null) {
                 Log.d(TAG, jsonIn);
                 JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
-                if (jsonObject.has("auth") && "OK".equals(jsonObject.get("auth").getAsString())) {
-                    driverName = jsonObject.get("driverName").getAsString();
-                    preferences.edit()
-                               .putBoolean("login", true)
-                               .putString("account", account)
-                               .putString("password", password)
-                               .apply();
-                    driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
-                                              .create()
-                                              .fromJson(jsonObject.get("driver"), Driver.class);
-                    jsonObject = new JsonObject();
-                    jsonObject.addProperty("action", "getPicture");
-                    jsonObject.addProperty("memID", driver.getMemID());
-                    imageTask = new ImageTask(this).execute("/memberApi", jsonObject.toString());
-                    return false;
+                if (jsonObject.has("auth")) {
+                    String auth = jsonObject.get("auth").getAsString();
+                    if ("OK".equals(auth)) {
+                        driverName = jsonObject.get("driverName").getAsString();
+                        preferences.edit()
+                                   .putBoolean("login", true)
+                                   .putString("account", account)
+                                   .putString("password", password)
+                                   .apply();
+                        driver = new GsonBuilder().setDateFormat("yyyy-MM-dd")
+                                                  .create()
+                                                  .fromJson(jsonObject.get("driver"), Driver.class);
+                        jsonObject = new JsonObject();
+                        jsonObject.addProperty("action", "getPicture");
+                        jsonObject.addProperty("memID", driver.getMemID());
+                        imageTask = new ImageTask(this).execute("/memberApi", jsonObject.toString());
+                        return false;
+                    } else if ("Unverified".equals(auth))
+                        Toast.makeText(this, "未驗證", Toast.LENGTH_SHORT).show();
                 }
             }
         }
