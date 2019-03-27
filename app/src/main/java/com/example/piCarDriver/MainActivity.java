@@ -91,7 +91,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onPause() {
         super.onPause();
-        imageTask.cancel(true);
+        if (imageTask != null)
+            imageTask.cancel(true);
     }
 
     @Override
