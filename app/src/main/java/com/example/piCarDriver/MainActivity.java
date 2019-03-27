@@ -114,6 +114,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         if (id == R.id.nav_order) {
+            if (driver.getBanned() == 1) {
+                Toast.makeText(this, "Banned!!!", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+
             orderPages = new OrderPagesBuilder().addFragment("/singleOrderApi","getNewSingleOrder", OrderAdapterType.SINGLE_ORDER, "單人訂單")
                                                 .addFragment("/singleOrderApi", "getLongTermSingleOrder", OrderAdapterType.LONG_TERM_ORDER, "長期訂單")
                                                 .addFragment("/groupOrderApi", "getGroupOrder", OrderAdapterType.GROUP_ORDER, "揪團訂單")
